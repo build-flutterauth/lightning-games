@@ -1,0 +1,477 @@
+/* War — table, cards, and screens. Tokens come from shared/lightning.css. */
+
+/* ---------- Setup (names) ---------- */
+
+.setup {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(48rem 40rem at 0% 50%, rgb(63 180 255 / 0.16), transparent 62%),
+    radial-gradient(48rem 40rem at 100% 50%, rgb(255 90 110 / 0.16), transparent 62%),
+    var(--bg);
+}
+
+.setup-panel {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 420px);
+}
+
+.setup-art {
+  --card-w: 66px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 112px;
+  margin-top: 6px;
+}
+
+.setup-art .card {
+  position: absolute;
+}
+
+.setup-art .card:first-child {
+  --seat: var(--p1);
+  transform: translateX(-30px) rotate(-11deg);
+}
+
+.setup-art .card:last-child {
+  --seat: var(--p2);
+  transform: translateX(30px) rotate(11deg);
+}
+
+.setup-title {
+  margin: 0;
+  font-size: clamp(3.8rem, 17vw, 5.6rem);
+  font-weight: 900;
+  font-stretch: 125%;
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.setup-lede {
+  margin: -2px 0 6px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.seat-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 0.55em;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+
+.setup-go {
+  margin-top: 6px;
+  padding-block: 1em;
+  font-size: 1.05rem;
+}
+
+/* ---------- Game screen ---------- */
+
+/* Who owns how much of the deck, along the bottom edge of the bar. */
+.share {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 3px;
+  background: var(--p2);
+}
+
+.share-fill {
+  width: 50%;
+  height: 100%;
+  background: var(--p1);
+  transition: width 0.35s var(--ease-out);
+}
+
+/* ---------- Table ---------- */
+
+.table {
+  --card-w: clamp(64px, min(10.5vw, 19dvh), 150px);
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+
+/* The seam between the two halves. */
+.table::before {
+  content: '';
+  position: absolute;
+  top: 6%;
+  bottom: 6%;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(transparent, var(--line-strong), transparent);
+}
+
+.side {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'info info'
+    'stack play';
+  gap: 12px clamp(16px, 3vw, 44px);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(18px, 3.2vw, 44px);
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--seat) 15%, transparent), transparent 62%);
+  transition: opacity 0.4s;
+}
+
+.side[data-player='0'] {
+  --seat: var(--p1);
+}
+
+.side[data-player='1'] {
+  --seat: var(--p2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'info info'
+    'play stack';
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--seat) 15%, transparent), transparent 62%);
+}
+
+.side[data-player='1'] .info {
+  text-align: right;
+}
+
+.info {
+  grid-area: info;
+  min-width: 0;
+}
+
+.seat {
+  margin: 0;
+  color: var(--seat);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.name {
+  margin: 0.1rem 0 0;
+  font-size: clamp(1.5rem, 3.4vw, 2.8rem);
+  font-weight: 900;
+  font-stretch: 112%;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+
+.stack {
+  position: relative;
+  grid-area: stack;
+  align-self: center;
+  display: grid;
+  justify-items: center;
+}
+
+.deck {
+  position: relative;
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  border-radius: calc(var(--card-w) * 0.09);
+}
+
+.deck-top {
+  position: absolute;
+  inset: 0;
+  /* The top card rises as the stack grows; --stack draws the edges underneath. */
+  transform: translateY(calc(var(--depth, 0) * -1px));
+  transition: transform 0.2s var(--ease-out);
+}
+
+.deck.empty {
+  outline: 2px dashed var(--line-strong);
+  outline-offset: -2px;
+}
+
+.deck.empty .deck-top {
+  display: none;
+}
+
+.count {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.count b {
+  display: block;
+  color: var(--text);
+  font-size: clamp(1.7rem, 3.4vw, 2.7rem);
+  font-weight: 900;
+  font-stretch: 110%;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gain {
+  position: absolute;
+  top: -1.6rem;
+  color: var(--seat);
+  font-size: 1.5rem;
+  font-weight: 900;
+  font-stretch: 110%;
+  pointer-events: none;
+}
+
+/* Cards on the table fan toward the seam; the newest card sits on top, nearest the middle. */
+.play {
+  grid-area: play;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: calc(var(--card-w) * 1.4);
+}
+
+.side[data-player='1'] .play {
+  flex-direction: row-reverse;
+}
+
+.side[data-player='0'] .play > .card + .card {
+  margin-left: calc(var(--step, calc(var(--card-w) * 0.3)) - var(--card-w));
+}
+
+.side[data-player='1'] .play > .card + .card {
+  margin-right: calc(var(--step, calc(var(--card-w) * 0.3)) - var(--card-w));
+}
+
+.side.champion {
+  background: radial-gradient(130% 110% at 50% 50%, color-mix(in srgb, var(--seat) 30%, transparent), transparent 70%);
+}
+
+.side.defeated {
+  opacity: 0.45;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  --radius-card: calc(var(--card-w) * 0.09);
+  --ink-card: #17151f;
+  position: relative;
+  flex: none;
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  perspective: calc(var(--card-w) * 6);
+}
+
+.card[data-suit='hearts'],
+.card[data-suit='diamonds'] {
+  --ink-card: #d0283b;
+}
+
+.card-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.card.down .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-front {
+  overflow: hidden;
+  background: linear-gradient(160deg, #fffdf7, #f1ebdc);
+  color: var(--ink-card);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.14), 0 8px 22px rgb(0 0 0 / 0.38);
+  transition: box-shadow 0.2s, filter 0.2s;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+.corner {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  font-size: calc(var(--card-w) * 0.16);
+  font-weight: 850;
+  font-stretch: 80%;
+  line-height: 0.95;
+}
+
+.corner i {
+  font-style: normal;
+  font-size: 0.85em;
+}
+
+.corner.tl {
+  top: 6%;
+  left: 7%;
+}
+
+.corner.br {
+  right: 7%;
+  bottom: 6%;
+  transform: rotate(180deg);
+}
+
+.center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+}
+
+.center .rank {
+  font-size: calc(var(--card-w) * 0.46);
+  font-weight: 900;
+  font-stretch: 72%;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.center .suit {
+  font-size: calc(var(--card-w) * 0.26);
+  line-height: 1;
+}
+
+.card.win .card-front {
+  box-shadow:
+    0 0 0 3px var(--seat),
+    0 0 calc(var(--card-w) * 0.25) color-mix(in srgb, var(--seat) 75%, transparent),
+    0 8px 22px rgb(0 0 0 / 0.38);
+}
+
+.card.lose .card-front {
+  filter: brightness(0.62) saturate(0.7);
+}
+
+/* Card backs and the deck share one design, tinted by seat. */
+.back-art {
+  border-radius: var(--radius-card, calc(var(--card-w) * 0.09));
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.09) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.09) 0 2px, transparent 2px 9px),
+    color-mix(in oklab, var(--seat) 72%, #070a1a);
+  box-shadow:
+    inset 0 0 0 calc(var(--card-w) * 0.045) #f6f1e4,
+    inset 0 0 0 calc(var(--card-w) * 0.06) rgb(0 0 0 / 0.18),
+    var(--stack, 0 0 transparent),
+    0 8px 20px rgb(0 0 0 / 0.38);
+}
+
+.back-art::after {
+  content: '';
+  position: absolute;
+  inset: 32% 30%;
+  background: rgb(255 255 255 / 0.92);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13 2 3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* ---------- Callout ("WAR!") ---------- */
+
+/* Below the cards on desktop, so it never covers names or the fan. */
+.callout {
+  position: absolute;
+  bottom: 9%;
+  left: 50%;
+  z-index: 20;
+  translate: -50% 0;
+  padding: 0.12em 0.5em 0.16em;
+  border-radius: 12px;
+  background: var(--bolt);
+  box-shadow: 0 12px 44px rgb(255 212 59 / 0.35);
+  color: var(--bolt-ink);
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+  font-weight: 900;
+  font-stretch: 125%;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+
+.callout.note {
+  background: var(--panel-3);
+  box-shadow: 0 12px 44px rgb(0 0 0 / 0.4);
+  color: var(--text);
+  font-size: clamp(1rem, 2.6vw, 1.6rem);
+  font-stretch: 105%;
+  text-transform: none;
+}
+
+/* ---------- Phones: stack the halves top to bottom ---------- */
+
+@media (max-width: 640px) {
+  .play,
+  .side[data-player='1'] .play {
+    justify-content: center;
+  }
+
+  .table {
+    --card-w: clamp(54px, min(23vw, 14dvh), 112px);
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .table::before {
+    top: 50%;
+    right: 6%;
+    bottom: auto;
+    left: 6%;
+    width: auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+
+  .side {
+    gap: 8px 16px;
+    padding: 14px 16px;
+  }
+
+  .side[data-player='1'] {
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      'play stack'
+      'info info';
+  }
+
+  .name {
+    font-size: 1.5rem;
+  }
+
+  .count {
+    margin-top: 0.5rem;
+  }
+
+  .callout {
+    top: 50%;
+    bottom: auto;
+    translate: -50% -50%;
+  }
+}

@@ -1,0 +1,462 @@
+/* Lightning Games — tokens and base components shared by every game. */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #090b17;
+  --bg-2: #0f1226;
+  --panel: #151935;
+  --panel-2: #1c2147;
+  --panel-3: #262c5c;
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.18);
+  --text: #f5f2e9;
+  --muted: #9aa1c6;
+
+  --bolt: #ffd43b;
+  --bolt-hover: #ffe170;
+  --bolt-ink: #1d1700;
+
+  /* Main action color; a game can retheme it without touching the brand bolt. */
+  --primary: var(--bolt);
+  --primary-hover: var(--bolt-hover);
+  --primary-ink: var(--bolt-ink);
+
+  /* Player seats. Games map players onto these in order. */
+  --p1: #3fb4ff;
+  --p2: #ff5a6e;
+
+  --radius: 14px;
+  --radius-lg: 22px;
+  --font: 'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Brand */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  color: var(--bolt);
+  font-weight: 800;
+  font-stretch: 115%;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.bolt {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  fill: currentColor;
+}
+
+.icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Buttons */
+
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.85em 1.4em;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-weight: 750;
+  line-height: 1.1;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.18s, border-color 0.18s, transform 0.12s;
+}
+
+.btn:hover {
+  background: var(--panel-3);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: var(--primary-ink);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.btn-sm {
+  padding: 0.55em 1em;
+  font-size: 0.85rem;
+}
+
+/* Forms */
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8em 1em;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  font-size: 1.05rem;
+  font-weight: 600;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.input::placeholder {
+  color: rgb(154 161 198 / 0.6);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent, var(--primary));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, var(--primary)) 30%, transparent);
+}
+
+/* Segmented control (e.g. speed) */
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-2);
+}
+
+.segmented button {
+  appearance: none;
+  padding: 0.45em 0.95em;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 0.18s, color 0.18s;
+}
+
+.segmented button:hover {
+  color: var(--text);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* Panels and overlays */
+
+.panel {
+  width: min(100%, 460px);
+  padding: clamp(22px, 5vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(5 7 16 / 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: lg-fade-in 0.25s ease-out;
+}
+
+.overlay > .panel {
+  animation: lg-pop-in 0.35s var(--ease-out);
+}
+
+@keyframes lg-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes lg-pop-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+}
+
+/* Game screen: top bar over a full-height play area */
+
+.game {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 10px clamp(14px, 3vw, 28px);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  color: var(--text);
+  font-size: 1.15rem;
+  font-weight: 900;
+  font-stretch: 120%;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.topbar-brand .bolt {
+  color: var(--bolt);
+}
+
+.stats {
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats b {
+  color: var(--text);
+}
+
+.stats .dot {
+  margin: 0 0.5em;
+}
+
+/* Speed picker and result panels */
+
+.panel-title {
+  margin: 0.3rem 0 1.2rem;
+  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  font-weight: 900;
+  font-stretch: 115%;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.speed-options {
+  display: grid;
+  gap: 10px;
+}
+
+.speed-option {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.18s, border-color 0.18s, transform 0.12s;
+}
+
+.speed-option:hover {
+  border-color: var(--primary);
+  background: var(--panel-3);
+}
+
+.speed-option:active {
+  transform: scale(0.985);
+}
+
+.speed-option .bolts {
+  display: flex;
+  color: var(--speed-bolt, var(--bolt));
+}
+
+.speed-option .bolt {
+  width: 18px;
+  height: 22px;
+  margin-right: -4px;
+}
+
+.speed-option .label {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.speed-option .sub {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.speed-option .eta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result {
+  text-align: center;
+}
+
+.result .panel-title {
+  margin-bottom: 0.5rem;
+  color: var(--seat, var(--text));
+  font-size: clamp(2rem, 7vw, 3rem);
+}
+
+.result-summary {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.result-hint {
+  margin: 1rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    gap: 8px 10px;
+    padding: 8px 12px 10px;
+  }
+
+  .topbar .stats {
+    order: 4;
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .topbar .segmented {
+    margin-left: auto;
+  }
+
+  .segmented button {
+    padding: 0.45em 0.7em;
+  }
+
+  .quit {
+    padding: 0.55em;
+  }
+
+  .quit-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

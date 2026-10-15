@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lightning Games</title>
+  <meta name="description" content="Auto-play web games. Pick the players, pick a speed, watch it go.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+  <link rel="stylesheet" href="shared/lightning.css">
+  <style>
+    body {
+      min-height: 100dvh;
+      background:
+        radial-gradient(60rem 30rem at 50% -10%, rgb(255 212 59 / 0.12), transparent 70%),
+        var(--bg);
+    }
+
+    .hub {
+      width: min(100% - 32px, 960px);
+      margin: 0 auto;
+      padding: clamp(40px, 9vw, 96px) 0 64px;
+    }
+
+    .hub h1 {
+      margin: 0.4rem 0 0.6rem;
+      font-size: clamp(2.6rem, 9vw, 5.2rem);
+      font-weight: 900;
+      font-stretch: 125%;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+    }
+
+    .hub h1 span {
+      color: var(--bolt);
+    }
+
+    .hub .lede {
+      max-width: 36ch;
+      margin: 0 0 clamp(32px, 6vw, 56px);
+      color: var(--muted);
+      font-size: clamp(1rem, 2.4vw, 1.2rem);
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .tile {
+      display: grid;
+      grid-template-rows: 170px auto;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--panel);
+      color: inherit;
+      text-decoration: none;
+      transition: transform 0.2s var(--ease-out), border-color 0.2s;
+    }
+
+    .tile:hover {
+      transform: translateY(-3px);
+      border-color: var(--line-strong);
+    }
+
+    .tile-art {
+      position: relative;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(90deg, rgb(63 180 255 / 0.22), transparent 50%, rgb(255 90 110 / 0.22)),
+        var(--bg-2);
+    }
+
+    .mini-card {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: 74px;
+      height: 104px;
+      border-radius: 7px;
+      background: #fbf7ee;
+      box-shadow: 0 10px 24px rgb(0 0 0 / 0.4);
+      font-weight: 900;
+      font-stretch: 80%;
+      font-size: 2.1rem;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .mini-card small {
+      display: block;
+      font-size: 1.3rem;
+    }
+
+    .mini-card.left {
+      color: #18161f;
+      transform: translateX(-34px) rotate(-10deg);
+      box-shadow: 0 0 0 3px var(--p1), 0 10px 30px rgb(63 180 255 / 0.45);
+    }
+
+    .mini-card.right {
+      color: #d32a3d;
+      transform: translateX(34px) rotate(10deg);
+      box-shadow: 0 0 0 3px var(--p2), 0 10px 30px rgb(255 90 110 / 0.45);
+    }
+
+    .candy-art {
+      background: linear-gradient(160deg, #ffe0ef, #e3f6ff 55%, #e6fbe9);
+    }
+
+    .candy-path {
+      display: flex;
+      gap: 7px;
+      transform: rotate(-6deg);
+    }
+
+    .candy-path span {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(rgb(255 255 255 / 0.35) 0 30%, transparent 30%), var(--c);
+      box-shadow: 0 3px 0 rgb(80 30 60 / 0.2);
+      transform: translateY(calc(sin(var(--i) * 0.9) * 16px));
+    }
+
+    .tile-body {
+      padding: 18px 20px 20px;
+    }
+
+    .tile h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+      font-stretch: 115%;
+      text-transform: uppercase;
+    }
+
+    .tile p {
+      margin: 0 0 0.9rem;
+      color: var(--muted);
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tags span {
+      padding: 0.25em 0.7em;
+      border-radius: 999px;
+      background: var(--bg-2);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main class="hub">
+    <p class="brand">
+      <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Lightning Games
+    </p>
+    <h1>Games that <span>play themselves.</span></h1>
+    <p class="lede">Name the players, pick a speed, and watch it go.</p>
+
+    <section class="games" aria-label="Games">
+      <a class="tile" href="war/">
+        <div class="tile-art" aria-hidden="true">
+          <div class="mini-card left">A<small>♠&#xFE0E;</small></div>
+          <div class="mini-card right">K<small>♥&#xFE0E;</small></div>
+        </div>
+        <div class="tile-body">
+          <h2>War</h2>
+          <p>The classic two-player card battle. High card wins. Ties mean war.</p>
+          <div class="tags"><span>2 players</span><span>52 cards</span><span>3 speeds</span></div>
+        </div>
+      </a>
+      <a class="tile" href="candyland/">
+        <div class="tile-art candy-art" aria-hidden="true">
+          <div class="candy-path"><span style="--c:#f2545b;--i:0"></span><span style="--c:#a463f2;--i:1"></span><span style="--c:#ffd23f;--i:2"></span><span style="--c:#4d9de0;--i:3"></span><span style="--c:#ff9f43;--i:4"></span><span style="--c:#3fbf7f;--i:5"></span><span style="--c:#ff8fc7;--i:6"></span></div>
+        </div>
+        <div class="tile-body">
+          <h2>Candy Land</h2>
+          <p>Draw a card, follow the colors, and race to the Candy Castle.</p>
+          <div class="tags"><span>2–4 players</span><span>64 cards</span><span>3 speeds</span></div>
+        </div>
+      </a>
+    </section>
+  </main>
+</body>
+</html>

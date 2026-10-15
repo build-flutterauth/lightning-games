@@ -1,0 +1,9 @@
+{
+  "name": "lightning-games",
+  "private": true,
+  "description": "Auto-play web games. Plain HTML, CSS and JS: no build step.",
+  "scripts": {
+    "start": "python -m http.server 5173",
+    "test": "node --test"
+  }
+}

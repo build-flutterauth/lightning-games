@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Candy Land · Lightning Games</title>
+  <meta name="description" content="Auto-play Candy Land: 2 to 4 players race along the rainbow path to the Candy Castle.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&display=swap">
+  <link rel="stylesheet" href="../shared/lightning.css">
+  <link rel="stylesheet" href="candyland.css">
+</head>
+<body>
+  <!-- Artwork used by the board, cards, roster and setup -->
+  <svg class="sprites" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="rainbow-fill" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#f2545b"/><stop offset=".1667" stop-color="#f2545b"/>
+        <stop offset=".1667" stop-color="#ff9f43"/><stop offset=".3333" stop-color="#ff9f43"/>
+        <stop offset=".3333" stop-color="#ffd23f"/><stop offset=".5" stop-color="#ffd23f"/>
+        <stop offset=".5" stop-color="#3fbf7f"/><stop offset=".6667" stop-color="#3fbf7f"/>
+        <stop offset=".6667" stop-color="#4d9de0"/><stop offset=".8333" stop-color="#4d9de0"/>
+        <stop offset=".8333" stop-color="#a463f2"/><stop offset="1" stop-color="#a463f2"/>
+      </linearGradient>
+
+      <symbol id="gingerbread" viewBox="-12 -13 24 24" overflow="visible">
+        <ellipse cx="0" cy="10.4" rx="5.6" ry="1.6" fill="#3c1428" fill-opacity=".25"/>
+        <g fill="#fff" stroke="#fff" stroke-linecap="round">
+          <circle cx="0" cy="-6.2" r="5.7" stroke="none"/>
+          <path d="M-7.6 -.6H7.6" stroke-width="6.2"/>
+          <path d="M0 -3V3.4" stroke-width="9"/>
+          <path d="M0 2.6-4.3 8.6M0 2.6 4.3 8.6" stroke-width="6.4"/>
+        </g>
+        <g fill="currentColor" stroke="currentColor" stroke-linecap="round">
+          <circle cx="0" cy="-6.2" r="4.3" stroke="none"/>
+          <path d="M-7.6 -.6H7.6" stroke-width="3.6"/>
+          <path d="M0 -3V3.4" stroke-width="6.4"/>
+          <path d="M0 2.6-4.3 8.6M0 2.6 4.3 8.6" stroke-width="3.8"/>
+        </g>
+        <g fill="#fff">
+          <circle cx="-1.6" cy="-6.9" r=".8"/><circle cx="1.6" cy="-6.9" r=".8"/>
+          <circle cx="0" cy="-.6" r=".85"/><circle cx="0" cy="2.2" r=".85"/>
+        </g>
+        <path d="M-1.7-4.7q1.7 1.4 3.4 0" fill="none" stroke="#fff" stroke-width=".75" stroke-linecap="round"/>
+      </symbol>
+
+      <symbol id="pic-plum" viewBox="0 0 24 24">
+        <path d="M12 8c0-2.2 1-3.8 3-5" fill="none" stroke="#6b4423" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M13.6 5.6c2.4-1.6 5-.9 6.2.4-2 1.6-4.6 1.6-6.2-.4z" fill="#3fbf7f"/>
+        <circle cx="12" cy="14.5" r="7" fill="#7b2cbf"/>
+        <ellipse cx="9.3" cy="12" rx="1.8" ry="2.4" fill="#fff" fill-opacity=".45"/>
+      </symbol>
+      <symbol id="pic-candy-cane" viewBox="0 0 24 24">
+        <path d="M9 21.5V8.5a4 4 0 0 1 8 0V10" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round"/>
+        <path d="M9 21.5V8.5a4 4 0 0 1 8 0V10" fill="none" stroke="#e63946" stroke-width="4.2" stroke-dasharray="2.1 2.1"/>
+      </symbol>
+      <symbol id="pic-gumdrop" viewBox="0 0 24 24">
+        <path d="M4.5 19.5c0-8 3.4-13 7.5-13s7.5 5 7.5 13z" fill="#22a55a"/>
+        <path d="M8 10.5c.8-1.6 2-2.6 3.3-2.9" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
+        <g fill="#fff" fill-opacity=".85">
+          <circle cx="9" cy="15" r=".7"/><circle cx="13" cy="12.5" r=".7"/><circle cx="15.5" cy="16.5" r=".7"/><circle cx="11.5" cy="17.5" r=".7"/>
+        </g>
+      </symbol>
+      <symbol id="pic-peanut" viewBox="0 0 24 24">
+        <path d="M12 2.8c3.2 0 4.8 2.3 4.8 4.8 0 1.7-1 2.6-1 4.1s1 2.4 1 4.1c0 2.5-1.6 4.8-4.8 4.8s-4.8-2.3-4.8-4.8c0-1.7 1-2.6 1-4.1s-1-2.4-1-4.1c0-2.5 1.6-4.8 4.8-4.8z" fill="#d9a066"/>
+        <g fill="#a86e35"><circle cx="10.5" cy="6.5" r=".7"/><circle cx="13.5" cy="8.5" r=".7"/><circle cx="10.5" cy="15.5" r=".7"/><circle cx="13.5" cy="17.5" r=".7"/></g>
+      </symbol>
+      <symbol id="pic-lollipop" viewBox="0 0 24 24">
+        <path d="M12 14v8.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="12" cy="9" r="6.8" fill="#ff4f9a"/>
+        <path d="M12 9m-4.2 0a4.2 4.2 0 1 1 4.2 4.2 2.6 2.6 0 1 1 0-5.2" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="pic-ice-cream" viewBox="0 0 24 24">
+        <path d="M7.4 12h9.2L12 22.5z" fill="#e0a458"/>
+        <path d="M9 13.5l5.6 3M10.4 17.5l3.2-3.5" stroke="#b97a35" stroke-width=".8"/>
+        <path d="M6.6 12.4a5.4 5.4 0 1 1 10.8 0c0 .9-.9 1.1-1.5.6-.5.9-1.6.9-2.1.2-.6.8-1.8.8-2.4 0-.5.7-1.6.7-2.1-.2-.6.5-1.5.3-1.5-.6z" fill="#fff4d6"/>
+        <circle cx="12" cy="4.6" r="1.7" fill="#e63946"/>
+      </symbol>
+      <symbol id="licorice" viewBox="0 0 24 24">
+        <path d="M5 19 19 5" stroke="#2b1b24" stroke-width="6.5" stroke-linecap="round"/>
+        <path d="M5 19 19 5" stroke="#7a5a6c" stroke-width="6.5" stroke-dasharray="1.4 2.6"/>
+      </symbol>
+      <symbol id="castle" viewBox="0 0 48 48">
+        <g stroke="#7a2e57" stroke-width="1.1" stroke-linejoin="round">
+          <path d="M10 22h28v22H10z" fill="#ffd1e6"/>
+          <path d="M4 18h9v26H4zM35 18h9v26h-9z" fill="#ffb3d6"/>
+          <path d="M18 14h12v30H18z" fill="#ffc6e0"/>
+          <path d="M3 18 8.5 5.5 14 18z" fill="#a463f2"/>
+          <path d="M34 18 39.5 5.5 45 18z" fill="#4d9de0"/>
+          <path d="M16.5 14 24 .5l7.5 13.5z" fill="#ff4f9a"/>
+          <path d="M20.5 44v-6.5a3.5 3.5 0 0 1 7 0V44z" fill="#8a3b66"/>
+        </g>
+        <circle cx="24" cy="24" r="2.3" fill="#ffd23f"/>
+        <path d="M7 26h3v4H7zM38 26h3v4h-3z" fill="#8a3b66" fill-opacity=".5"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 1. Players and speed -->
+  <section class="setup" id="setup">
+    <form class="panel setup-panel" id="setup-form" autocomplete="off">
+      <a class="brand" href="../">
+        <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Lightning Games
+      </a>
+      <h1 class="setup-title" id="setup-title">Candy Land</h1>
+      <p class="setup-lede">Draw a card, follow the colors, race to the Candy Castle.</p>
+
+      <div class="step">
+        <p class="field-label" id="count-label">Players</p>
+        <div class="segmented count-switch" id="count-switch" role="group" aria-labelledby="count-label"></div>
+      </div>
+
+      <div class="player-rows" id="player-rows"></div>
+
+      <div class="step">
+        <p class="field-label">Pick a speed to start</p>
+        <div class="speed-options" id="speed-options"></div>
+      </div>
+    </form>
+  </section>
+
+  <!-- 2. The board -->
+  <section class="game" id="game" hidden>
+    <header class="topbar">
+      <a class="topbar-brand" href="../" aria-label="Lightning Games home">
+        <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span>Candy Land</span>
+      </a>
+      <ol class="roster" id="roster" aria-label="Players"></ol>
+      <p class="stats">Round <b id="stat-turns">0</b></p>
+      <div class="segmented speed-switch" id="speed-switch" role="group" aria-label="Speed"></div>
+      <button class="btn btn-ghost btn-sm quit" id="quit" type="button" aria-label="New game">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+        <span class="quit-label">New game</span>
+      </button>
+    </header>
+
+    <main class="board-wrap" id="board-wrap">
+      <svg class="board" id="board" role="img" aria-label="Candy Land board"></svg>
+      <div class="hud" id="hud" aria-live="off">
+        <div class="cl-card" id="cl-card"></div>
+        <div class="hud-text">
+          <p class="hud-turn" id="hud-turn"></p>
+          <p class="hud-note" id="hud-note"></p>
+          <p class="hud-deck" id="hud-deck"></p>
+        </div>
+      </div>
+    </main>
+
+    <div class="overlay" id="game-over" hidden>
+      <div class="panel result" role="dialog" aria-modal="true" aria-labelledby="winner">
+        <div class="result-art" aria-hidden="true">
+          <svg class="result-castle"><use href="#castle"/></svg>
+          <svg class="result-pawn" id="winner-pawn"><use href="#gingerbread"/></svg>
+        </div>
+        <p class="eyebrow">Game over</p>
+        <h2 class="panel-title" id="winner"></h2>
+        <p class="result-summary" id="summary"></p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="play-again" type="button">Play again</button>
+          <button class="btn" id="new-game" type="button">New game</button>
+        </div>
+        <p class="result-hint" id="replay-hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <script src="../shared/lightning.js"></script>
+  <script src="candyland-engine.js"></script>
+  <script src="candyland-board.js"></script>
+  <script src="candyland.js"></script>
+</body>
+</html>

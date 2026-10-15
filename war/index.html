@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>War · Lightning Games</title>
+  <meta name="description" content="Auto-play War: two players, one deck, highest card wins.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap">
+  <link rel="stylesheet" href="../shared/lightning.css">
+  <link rel="stylesheet" href="war.css">
+</head>
+<body>
+  <!-- 1. Names -->
+  <section class="setup" id="setup">
+    <form class="panel setup-panel" id="setup-form" autocomplete="off">
+      <a class="brand" href="../">
+        <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Lightning Games
+      </a>
+      <div class="setup-art" id="setup-art" aria-hidden="true"></div>
+      <h1 class="setup-title">War</h1>
+      <p class="setup-lede">Two players, one deck, no decisions. High card wins. Ties mean war.</p>
+
+      <label class="field" style="--accent: var(--p1)">
+        <span class="field-label"><span class="seat-dot"></span>Player 1</span>
+        <input class="input" id="name-0" name="p1" maxlength="20" placeholder="Player 1" spellcheck="false">
+      </label>
+      <label class="field" style="--accent: var(--p2)">
+        <span class="field-label"><span class="seat-dot"></span>Player 2</span>
+        <input class="input" id="name-1" name="p2" maxlength="20" placeholder="Player 2" spellcheck="false">
+      </label>
+
+      <button class="btn btn-primary setup-go" type="submit">Deal the cards</button>
+    </form>
+  </section>
+
+  <!-- 2. The table -->
+  <section class="game" id="game" hidden>
+    <header class="topbar">
+      <a class="topbar-brand" href="../" aria-label="Lightning Games home">
+        <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span>War</span>
+      </a>
+      <p class="stats">Battle <b id="stat-battles">0</b><span class="dot">·</span><b id="stat-wars">0</b> <span id="stat-wars-label">wars</span></p>
+      <div class="segmented speed-switch" id="speed-switch" role="group" aria-label="Speed"></div>
+      <button class="btn btn-ghost btn-sm quit" id="quit" type="button" aria-label="New game">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+        <span class="quit-label">New game</span>
+      </button>
+      <div class="share" aria-hidden="true"><div class="share-fill" id="share-fill"></div></div>
+    </header>
+
+    <main class="table" id="table">
+      <section class="side" data-player="0">
+        <div class="info">
+          <p class="seat">Player 1</p>
+          <h2 class="name" data-name>Player 1</h2>
+        </div>
+        <div class="stack">
+          <div class="deck" data-deck><div class="deck-top back-art"></div></div>
+          <p class="count"><b data-count>26</b> <span data-count-label>cards</span></p>
+        </div>
+        <div class="play" data-play aria-hidden="true"></div>
+      </section>
+
+      <section class="side" data-player="1">
+        <div class="info">
+          <p class="seat">Player 2</p>
+          <h2 class="name" data-name>Player 2</h2>
+        </div>
+        <div class="stack">
+          <div class="deck" data-deck><div class="deck-top back-art"></div></div>
+          <p class="count"><b data-count>26</b> <span data-count-label>cards</span></p>
+        </div>
+        <div class="play" data-play aria-hidden="true"></div>
+      </section>
+
+      <div class="callout" id="callout" hidden></div>
+    </main>
+
+    <!-- Speed choice, shown over the dealt table -->
+    <div class="overlay" id="speed-picker" hidden>
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="speed-title">
+        <p class="eyebrow" id="matchup"></p>
+        <h2 class="panel-title" id="speed-title">Pick a speed</h2>
+        <div class="speed-options" id="speed-options"></div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="overlay" id="game-over" hidden>
+      <div class="panel result" role="dialog" aria-modal="true" aria-labelledby="winner">
+        <p class="eyebrow">Game over</p>
+        <h2 class="panel-title" id="winner"></h2>
+        <p class="result-summary" id="summary"></p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="play-again" type="button">Play again</button>
+          <button class="btn" id="new-game" type="button">New game</button>
+        </div>
+        <p class="result-hint" id="replay-hint"></p>
+      </div>
+    </div>
+  </section>
+
+  <script src="../shared/lightning.js"></script>
+  <script src="war-engine.js"></script>
+  <script src="war.js"></script>
+</body>
+</html>
