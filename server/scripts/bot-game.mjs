@@ -105,7 +105,7 @@ async function lobbyAndPlacement(bots, watcher) {
   await late.expectError({ type: 'join', name: 'Late' }, /already started/);
   late.ws.close();
 
-  await host.expectError({ type: 'place', ships: [] }, /five ships/);
+  await host.expectError({ type: 'place', ships: [] }, /Place all 5 ships/);
   const fleets = {};
   for (const bot of bots) {
     const ships = engine.randomFleet(size);
@@ -257,6 +257,44 @@ console.log('5-player game with votes and a reconnect');
 await gameWithVotes();
 console.log('20-player game');
 await bigGame(20);
+// The host picks the fleet in the waiting room; everyone then places exactly that fleet.
+async function customFleetGame() {
+  const code = newCode();
+  const bots = ['Hana', 'Ivo', 'Jun'].map((n) => new Bot(code, n));
+  for (const bot of bots) {
+    await bot.connect();
+    bot.send({ type: 'join', name: bot.name });
+    await bot.waitFor((b) => b.seat, 'a seat');
+  }
+  const [host, guest] = bots;
+  const counts = { carrier: 0, battleship: 0, cruiser: 1, submarine: 0, destroyer: 3 };
+  await guest.expectError({ type: 'fleet', counts }, /Only the host/);
+  await host.expectError({ type: 'fleet', counts: { destroyer: 9 } }, /0 to 4/);
+
+  const huge = { carrier: 4, battleship: 4, cruiser: 4, submarine: 4, destroyer: 4 };
+  host.send({ type: 'fleet', counts: huge });
+  await all(bots, (b) => b.state.fleet.carrier === 4, 'the huge fleet');
+  await host.expectError({ type: 'start' }, /too many for a 10×10 sea/);
+
+  host.send({ type: 'fleet', counts });
+  await all(bots, (b) => b.state.fleet.destroyer === 3 && b.state.fleet.carrier === 0, 'the custom fleet');
+  host.send({ type: 'start' });
+  await all(bots, (b) => b.state.phase === 'placing', 'placing');
+
+  const fleet = engine.fleetFromCounts(counts);
+  await guest.expectError({ type: 'place', ships: engine.randomFleet(10) }, /Place all 4 ships/);
+  bots.forEach((b) => b.send({ type: 'place', ships: engine.randomFleet(10, Math.random, fleet) }));
+  await all(bots, (b) => b.state.phase === 'battle' || b.state.phase === 'over', 'the battle');
+  assert.ok(bots.every((b) => !b.state.myShips || b.state.myShips.length === 4));
+  const sunk = bots[0].events.find((e) => e.kind === 'collisions').sunk;
+  console.log(`  cruiser + 3 destroyers each: ${sunk.length} sank in collisions (${sunk.map((s) => s.name).join(', ') || 'none'})`);
+  await playOut(bots);
+  await finishAndRestart(bots);
+  assert.equal(bots[0].state.fleet.destroyer, 3, 'the fleet choice survives play again');
+}
+
+console.log('Custom fleet');
+await customFleetGame();
 console.log('Room limit');
 await fullRoom();
 console.log('All server checks passed');

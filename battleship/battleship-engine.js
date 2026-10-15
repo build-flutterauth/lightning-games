@@ -8,13 +8,16 @@
 (function (root) {
   'use strict';
 
-  const FLEET = [
-    { id: 'carrier', name: 'Carrier', size: 5 },
-    { id: 'battleship', name: 'Battleship', size: 4 },
-    { id: 'cruiser', name: 'Cruiser', size: 3 },
-    { id: 'submarine', name: 'Submarine', size: 3 },
-    { id: 'destroyer', name: 'Destroyer', size: 2 },
+  const SHIP_TYPES = [
+    { type: 'carrier', name: 'Carrier', size: 5 },
+    { type: 'battleship', name: 'Battleship', size: 4 },
+    { type: 'cruiser', name: 'Cruiser', size: 3 },
+    { type: 'submarine', name: 'Submarine', size: 3 },
+    { type: 'destroyer', name: 'Destroyer', size: 2 },
   ];
+  // The host picks how many of each type every player gets; this is the classic fleet.
+  const DEFAULT_COUNTS = { carrier: 1, battleship: 1, cruiser: 1, submarine: 1, destroyer: 1 };
+  const MAX_PER_TYPE = 4;
   const MIN_PLAYERS = 2;
   const MAX_PLAYERS = 20;
   const VOTE_DELAY_MS = 20000; // each player gets this long before others may vote to skip or banish them
@@ -33,19 +36,46 @@
   const covers = (ship, x, y) =>
     ship.dir === 'h' ? y === ship.y && x >= ship.x && x < ship.x + ship.size : x === ship.x && y >= ship.y && y < ship.y + ship.size;
 
+  // Check a host's fleet choice; returns clean counts or throws a message for the host.
+  function validateCounts(counts) {
+    const clean = {};
+    SHIP_TYPES.forEach(({ type }) => {
+      const n = counts == null ? 0 : counts[type] ?? 0;
+      if (!Number.isInteger(n) || n < 0 || n > MAX_PER_TYPE) throw new Error(`Pick 0 to ${MAX_PER_TYPE} of each ship`);
+      clean[type] = n;
+    });
+    if (!Object.values(clean).some((n) => n > 0)) throw new Error('Every fleet needs at least one ship');
+    return clean;
+  }
+
+  // Counts → the ships each player places, e.g. two destroyers become "Destroyer 1" and "Destroyer 2".
+  function fleetFromCounts(counts = DEFAULT_COUNTS) {
+    return SHIP_TYPES.flatMap(({ type, name, size }) => {
+      const n = counts[type] || 0;
+      return Array.from({ length: n }, (_, i) =>
+        n === 1 ? { id: type, type, name, size } : { id: `${type}-${i + 1}`, type, name: `${name} ${i + 1}`, size }
+      );
+    });
+  }
+
+  const FLEET = fleetFromCounts(DEFAULT_COUNTS);
+  const fleetSquares = (fleet) => fleet.reduce((sum, ship) => sum + ship.size, 0);
+  // A fleet may cover at most half the sea, so there's always room to place it.
+  const fleetFits = (fleet, size) => fleetSquares(fleet) <= Math.floor((size * size) / 2);
+
   // A player's placement: exactly the fleet, on the board, not overlapping itself.
   // Returns clean ship objects, or throws with a message suitable for the player.
-  function validateFleet(ships, size) {
-    if (!Array.isArray(ships) || ships.length !== FLEET.length) throw new Error('Place all five ships');
+  function validateFleet(ships, size, fleet = FLEET) {
+    if (!Array.isArray(ships) || ships.length !== fleet.length) throw new Error(`Place all ${fleet.length} ships`);
     const taken = new Set();
-    return FLEET.map((spec) => {
+    return fleet.map((spec) => {
       const ship = ships.find((s) => s && s.id === spec.id);
       if (!ship) throw new Error(`Place your ${spec.name}`);
       const { x, y, dir } = ship;
       if (!Number.isInteger(x) || !Number.isInteger(y) || (dir !== 'h' && dir !== 'v')) {
         throw new Error(`Your ${spec.name} is not on the board`);
       }
-      const clean = { id: spec.id, x, y, dir, size: spec.size };
+      const clean = { id: spec.id, name: spec.name, x, y, dir, size: spec.size };
       for (const [cx, cy] of shipCells(clean)) {
         if (cx < 0 || cy < 0 || cx >= size || cy >= size) throw new Error(`Your ${spec.name} hangs off the board`);
         const key = cy * size + cx;
@@ -56,18 +86,18 @@
     });
   }
 
-  function randomFleet(size, rng = Math.random) {
+  function randomFleet(size, rng = Math.random, fleet = FLEET) {
     for (;;) {
       const ships = [];
       const taken = new Set();
       let ok = true;
-      for (const spec of FLEET) {
+      for (const spec of fleet) {
         let placed = false;
         for (let attempt = 0; attempt < 200 && !placed; attempt++) {
           const dir = rng() < 0.5 ? 'h' : 'v';
           const x = Math.floor(rng() * (dir === 'h' ? size - spec.size + 1 : size));
           const y = Math.floor(rng() * (dir === 'v' ? size - spec.size + 1 : size));
-          const ship = { id: spec.id, x, y, dir, size: spec.size };
+          const ship = { id: spec.id, name: spec.name, x, y, dir, size: spec.size };
           const keys = shipCells(ship).map(([cx, cy]) => cy * size + cx);
           if (keys.some((k) => taken.has(k))) continue;
           keys.forEach((k) => taken.add(k));
@@ -80,8 +110,9 @@
     }
   }
 
-  const shipName = (id) => FLEET.find((s) => s.id === id).name;
-  const sunkRecord = (ship) => ({ owner: ship.owner, ship: ship.id, name: shipName(ship.id) });
+  // Rooms saved before custom fleets stored no names; their ids are the plain type names.
+  const shipName = (ship) => ship.name || SHIP_TYPES.find((t) => t.type === ship.id)?.name || 'Ship';
+  const sunkRecord = (ship) => ({ owner: ship.owner, ship: ship.id, name: shipName(ship) });
 
   /*
    * Start the battle once every fleet is placed. Ships of different players that share
@@ -92,7 +123,9 @@
     const ships = [];
     for (const owner of order) {
       for (const ship of fleets[owner]) {
-        ships.push({ owner, id: ship.id, x: ship.x, y: ship.y, dir: ship.dir, size: ship.size, hits: 0, sunk: null });
+        ships.push({
+          owner, id: ship.id, name: shipName(ship), x: ship.x, y: ship.y, dir: ship.dir, size: ship.size, hits: 0, sunk: null,
+        });
       }
     }
 
@@ -228,8 +261,8 @@
   }
 
   const api = {
-    FLEET, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
-    boardSize, shipCells, covers, validateFleet, randomFleet,
+    SHIP_TYPES, DEFAULT_COUNTS, MAX_PER_TYPE, FLEET, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
+    boardSize, shipCells, covers, validateCounts, fleetFromCounts, fleetSquares, fleetFits, validateFleet, randomFleet,
     createMatch, alivePlayers, isTargetable, shoot, skip, banish, votesNeeded,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

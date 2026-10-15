@@ -40,6 +40,8 @@
     joinName: $('join-name'),
     lobbyError: $('lobby-error'),
     lobbyList: $('lobby-list'),
+    fleetSummary: $('fleet-summary'),
+    fleetList: $('fleet-list'),
     lobbySize: $('lobby-size'),
     leave: $('leave'),
     start: $('start'),
@@ -194,6 +196,8 @@
   }
 
   const me = () => app.state.players.find((p) => p.id === app.state.you) || null;
+  // The ships every player places this game, as the host set them.
+  const fleet = () => E.fleetFromCounts(app.state?.fleet || E.DEFAULT_COUNTS);
   const player = (id) => app.state.players.find((p) => p.id === id);
   const nameOf = (id) => app.names[id] || 'Someone';
   const shareLink = () => `${location.origin}${location.pathname}?room=${app.code}`;
@@ -234,14 +238,64 @@
     if (!s.players.length) ui.lobbyList.innerHTML = '<li class="offline"><span class="name">Nobody here yet</span></li>';
 
     ui.lobbySize.textContent = `${plural(s.players.length, 'player')} → ${s.size}×${s.size} sea`;
+    const fits = renderFleetSetup();
     ui.start.hidden = s.you !== s.host;
-    ui.start.disabled = online < E.MIN_PLAYERS;
+    ui.start.disabled = online < E.MIN_PLAYERS || !fits;
     ui.leave.hidden = !joined;
     ui.lobbyWait.textContent = !joined
       ? 'Enter your name to join.'
       : s.you === s.host
         ? online < E.MIN_PLAYERS ? 'Waiting for at least one more player.' : 'Start when everyone is in.'
         : `Waiting for ${host ? host.name : 'the host'} to start…`;
+  }
+
+  // The host sets how many of each ship type everyone gets; others see the choice live.
+  function renderFleetSetup() {
+    const s = app.state;
+    const host = s.you === s.host;
+    const counts = s.fleet || E.DEFAULT_COUNTS;
+    const ships = fleet();
+    const fits = E.fleetFits(ships, s.size);
+    ui.fleetSummary.textContent = fits
+      ? `${plural(ships.length, 'ship')}, ${E.fleetSquares(ships)} squares`
+      : `${E.fleetSquares(ships)} squares is too many for a ${s.size}×${s.size} sea`;
+    ui.fleetSummary.classList.toggle('warn', !fits);
+
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    ui.fleetList.replaceChildren(
+      ...E.SHIP_TYPES.map(({ type, name, size }) => {
+        const n = counts[type] || 0;
+        const li = document.createElement('li');
+        li.classList.toggle('none', n === 0);
+        li.innerHTML =
+          `<span class="name">${name}</span>` +
+          `<span class="ship-size" aria-hidden="true">${'<i></i>'.repeat(size)}</span>` +
+          '<span class="stepper"></span>';
+        const stepper = li.querySelector('.stepper');
+        const count = (text) => Object.assign(document.createElement('output'), { textContent: text });
+        if (host) {
+          const set = (value) => send({ type: 'fleet', counts: { ...counts, [type]: value } });
+          const step = (label, aria, disabled, value) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label;
+            button.disabled = disabled;
+            button.setAttribute('aria-label', aria);
+            button.addEventListener('click', () => set(value));
+            return button;
+          };
+          stepper.append(
+            step('−', `One fewer ${name}`, n === 0 || total === 1, n - 1),
+            count(n),
+            step('+', `One more ${name}`, n === E.MAX_PER_TYPE, n + 1)
+          );
+        } else {
+          stepper.append(count(`×${n}`));
+        }
+        return li;
+      })
+    );
+    return fits;
   }
 
   /* ---------- The board ---------- */
@@ -347,15 +401,17 @@
 
   function resetPlacement() {
     const own = app.state.myShips;
-    app.placing = { ships: {}, selected: 'carrier', dir: 'h', hover: null };
+    app.placing = { ships: {}, selected: fleet()[0]?.id || null, dir: 'h', hover: null };
     if (own) own.forEach((ship) => { app.placing.ships[ship.id] = { x: ship.x, y: ship.y, dir: ship.dir }; });
     if (own) app.placing.selected = null;
   }
 
-  const spec = (id) => E.FLEET.find((s) => s.id === id);
+  const spec = (id) => fleet().find((s) => s.id === id);
 
   function placedShips() {
-    return E.FLEET.filter((s) => app.placing.ships[s.id]).map((s) => ({ id: s.id, size: s.size, ...app.placing.ships[s.id] }));
+    return fleet()
+      .filter((s) => app.placing.ships[s.id])
+      .map((s) => ({ id: s.id, name: s.name, size: s.size, ...app.placing.ships[s.id] }));
   }
 
   // Where the selected ship would go if dropped at (x, y): pulled back onto the board, and
@@ -395,7 +451,7 @@
       if (!c) return;
       if (!c.ok) return toast("Your ships can't overlap each other");
       placing.ships[c.ship.id] = { x: c.ship.x, y: c.ship.y, dir: c.ship.dir };
-      placing.selected = E.FLEET.find((s) => !placing.ships[s.id])?.id || null;
+      placing.selected = fleet().find((s) => !placing.ships[s.id])?.id || null;
     }
     renderBoard();
     renderDock();
@@ -408,7 +464,7 @@
 
   function randomize() {
     app.placing.ships = {};
-    E.randomFleet(app.state.size).forEach((s) => { app.placing.ships[s.id] = { x: s.x, y: s.y, dir: s.dir }; });
+    E.randomFleet(app.state.size, Math.random, fleet()).forEach((s) => { app.placing.ships[s.id] = { x: s.x, y: s.y, dir: s.dir }; });
     app.placing.selected = null;
     renderBoard();
     renderDock();
@@ -416,7 +472,7 @@
 
   function clearShips() {
     app.placing.ships = {};
-    app.placing.selected = 'carrier';
+    app.placing.selected = fleet()[0]?.id || null;
     renderBoard();
     renderDock();
   }
@@ -435,7 +491,7 @@
     if (ready) return;
 
     ui.dockShips.replaceChildren(
-      ...E.FLEET.map((ship) => {
+      ...fleet().map((ship) => {
         const li = document.createElement('li');
         const button = document.createElement('button');
         button.type = 'button';
@@ -453,7 +509,7 @@
         return li;
       })
     );
-    ui.done.disabled = placedShips().length < E.FLEET.length;
+    ui.done.disabled = placedShips().length < fleet().length;
   }
 
   /* ---------- Side panel ---------- */
@@ -571,7 +627,7 @@
 
   function renderRoster() {
     const s = app.state;
-    const total = E.FLEET.length;
+    const total = fleet().length;
     ui.roster.replaceChildren(
       ...s.players.map((p) => {
         const li = document.createElement('li');
@@ -581,10 +637,14 @@
         const afloat = p.afloat ?? total;
         const tag = p.banished ? 'Banished' : p.out ? 'Out' : !p.connected ? 'Offline'
           : s.phase === 'placing' ? (p.ready ? 'Ready' : 'Placing') : '';
+        // One pip per ship for small fleets; a count once there are too many to read as pips.
+        const pips = total <= 8
+          ? '<i></i>'.repeat(afloat) + '<i class="gone"></i>'.repeat(total - afloat)
+          : `<span class="pip-count">${afloat}/${total}</span>`;
         li.innerHTML =
           '<span class="dot"></span><span class="name"></span>' +
           (tag ? `<span class="tag">${tag}</span>` : '<span></span>') +
-          `<span class="pips" title="${plural(afloat, 'ship')} afloat">${'<i></i>'.repeat(afloat)}${'<i class="gone"></i>'.repeat(total - afloat)}</span>`;
+          `<span class="pips" title="${plural(afloat, 'ship')} afloat">${pips}</span>`;
         li.querySelector('.name').textContent = p.id === s.you ? `${p.name} (you)` : p.name;
         if (s.phase === 'placing' && s.you === s.host && !p.connected && !p.ready) {
           const remove = document.createElement('button');

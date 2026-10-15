@@ -61,15 +61,17 @@
 }
 
 .home-panel {
+  container-type: inline-size;
   display: grid;
   gap: 16px;
   width: min(100%, 440px);
 }
 
+/* Sized to the panel's width, so the stencil title never runs past the panel's edge. */
 .title {
   margin: 4px 0 0;
   font-family: var(--stencil);
-  font-size: clamp(2.6rem, 12vw, 4.2rem);
+  font-size: min(4.2rem, 14.5cqi);
   font-weight: 400;
   line-height: 0.95;
   letter-spacing: 0.02em;
@@ -187,6 +189,104 @@
   font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.fleet-setup {
+  display: grid;
+  gap: 8px;
+}
+
+.fleet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.fleet-head .field-label {
+  margin: 0;
+}
+
+.fleet-summary.warn {
+  color: #ff8a7a;
+  font-weight: 700;
+}
+
+.fleet-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Name on its own line, so the +/- buttons never crowd it. */
+.fleet-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name name'
+    'size stepper';
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+
+.fleet-list li.none {
+  opacity: 0.5;
+}
+
+.fleet-list .name {
+  grid-area: name;
+  font-weight: 700;
+}
+
+.fleet-list .ship-size {
+  grid-area: size;
+  --pc: var(--muted);
+}
+
+.fleet-list .ship-size i {
+  width: 9px;
+  height: 9px;
+}
+
+.stepper {
+  display: flex;
+  grid-area: stepper;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel-2);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.stepper output {
+  min-width: 1.4em;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .lobby-foot {
@@ -322,18 +422,21 @@
   border-radius: 50%;
 }
 
+.mark.miss::before,
+.mark.hit::before {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: calc(var(--cell) * 0.62);
+  line-height: 1;
+  border-radius: 0;
+}
+
 .mark.miss::before {
-  width: 30%;
-  height: 30%;
-  background: rgb(220 240 255 / 0.75);
-  box-shadow: 0 0 0 calc(var(--cell) * 0.08) rgb(220 240 255 / 0.18);
+  content: '\1F30A'; /* water wave */
 }
 
 .mark.hit::before {
-  width: 58%;
-  height: 58%;
-  background: radial-gradient(circle at 40% 35%, #fff2c4, #ffb02e 35%, var(--hit) 70%);
-  box-shadow: 0 0 calc(var(--cell) * 0.35) rgb(255 90 40 / 0.8);
+  content: '\1F525'; /* fire */
+  filter: drop-shadow(0 0 calc(var(--cell) * 0.12) rgb(255 90 40 / 0.9));
 }
 
 .mark.aim::before {
@@ -783,4 +886,11 @@
     width: 10px;
     height: 10px;
   }
+}
+
+.pip-count {
+  color: var(--pc);
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  FLEET, boardSize, shipCells, validateFleet, randomFleet,
+  FLEET, DEFAULT_COUNTS, MAX_PER_TYPE, validateCounts, fleetFromCounts, fleetSquares, fleetFits, boardSize, shipCells, validateFleet, randomFleet,
   createMatch, alivePlayers, isTargetable, shoot, skip, banish, votesNeeded,
 } = require('../battleship/battleship-engine.js');
 
@@ -29,7 +29,7 @@ test('board size follows the player count', () => {
 
 test('a fleet must be all five ships, on the board, without overlapping itself', () => {
   assert.equal(validateFleet(rows(0), 10).length, 5);
-  assert.throws(() => validateFleet(rows(0).slice(1), 10), /five ships/);
+  assert.throws(() => validateFleet(rows(0).slice(1), 10), /Place all 5 ships/);
   assert.throws(() => validateFleet(rows(6), 10), /off the board/);
   const overlapping = rows(0);
   overlapping[1] = { ...overlapping[1], y: 0 };
@@ -140,4 +140,53 @@ test('random 2–20 player games always finish with at most one fleet afloat', (
     assert.ok(afloat.size <= 1);
     if (match.winner) assert.ok(afloat.has(match.winner));
   }
+});
+
+test('the host can pick 0 to 4 of each ship type, but not an empty fleet', () => {
+  assert.deepEqual(validateCounts(DEFAULT_COUNTS), DEFAULT_COUNTS);
+  assert.deepEqual(validateCounts({ destroyer: 3 }), { carrier: 0, battleship: 0, cruiser: 0, submarine: 0, destroyer: 3 });
+  assert.throws(() => validateCounts({ destroyer: MAX_PER_TYPE + 1 }), /0 to 4/);
+  assert.throws(() => validateCounts({ destroyer: -1 }), /0 to 4/);
+  assert.throws(() => validateCounts({ destroyer: 1.5 }), /0 to 4/);
+  assert.throws(() => validateCounts({}), /at least one ship/);
+});
+
+test('repeated ship types get numbered names and their own ids', () => {
+  const fleet = fleetFromCounts({ carrier: 1, destroyer: 2 });
+  assert.deepEqual(fleet.map((s) => s.id), ['carrier', 'destroyer-1', 'destroyer-2']);
+  assert.deepEqual(fleet.map((s) => s.name), ['Carrier', 'Destroyer 1', 'Destroyer 2']);
+  assert.equal(fleetSquares(fleet), 9);
+});
+
+test('a fleet may cover at most half the sea', () => {
+  assert.equal(fleetFits(FLEET, 10), true);
+  assert.equal(fleetFits(fleetFromCounts({ carrier: 2, battleship: 2, cruiser: 2, submarine: 2, destroyer: 2 }), 10), true);
+  assert.equal(fleetFits(fleetFromCounts({ carrier: 3, battleship: 3, cruiser: 3, submarine: 3, destroyer: 3 }), 10), false);
+  assert.equal(fleetFits(fleetFromCounts({ carrier: 4, battleship: 4, cruiser: 4, submarine: 4, destroyer: 4 }), 26), true);
+});
+
+test('custom fleets are placed, validated, and announced by their own names', () => {
+  const fleet = fleetFromCounts({ submarine: 1, destroyer: 2 });
+  for (let seed = 1; seed < 50; seed++) validateFleet(randomFleet(10, mulberry32(seed), fleet), 10, fleet);
+  assert.throws(() => validateFleet(rows(0), 10, fleet), /Place all 3 ships/);
+
+  const a = [
+    { id: 'submarine', x: 0, y: 0, dir: 'h' },
+    { id: 'destroyer-1', x: 0, y: 1, dir: 'h' },
+    { id: 'destroyer-2', x: 0, y: 2, dir: 'h' },
+  ];
+  const b = [
+    { id: 'submarine', x: 5, y: 5, dir: 'h' },
+    { id: 'destroyer-1', x: 5, y: 6, dir: 'h' },
+    { id: 'destroyer-2', x: 1, y: 2, dir: 'v' }, // crosses a's second destroyer at (1,2)
+  ];
+  const fleets = { a: validateFleet(a, 10, fleet), b: validateFleet(b, 10, fleet) };
+  const { events } = createMatch({ size: 10, fleets, order: ['a', 'b'] });
+  assert.deepEqual(events[0].sunk.map((s) => `${s.owner}:${s.name}`).sort(), ['a:Destroyer 2', 'b:Destroyer 2']);
+});
+
+test('ships from rooms saved before custom fleets still get names', () => {
+  const legacy = rows(0).map(({ name, ...ship }) => ship);
+  const { events } = createMatch({ size: 10, fleets: { a: legacy, b: legacy }, order: ['a', 'b'] });
+  assert.ok(events[0].sunk.every((s) => typeof s.name === 'string' && s.name !== 'Ship'));
 });

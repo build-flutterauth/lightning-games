@@ -10,8 +10,9 @@ import { DurableObject } from 'cloudflare:workers';
 import engine from '../../battleship/battleship-engine.js';
 
 const {
-  MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
-  boardSize, validateFleet, createMatch, alivePlayers, shoot, skip, banish, votesNeeded,
+  DEFAULT_COUNTS, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
+  boardSize, validateCounts, fleetFromCounts, fleetSquares, fleetFits,
+  validateFleet, createMatch, alivePlayers, shoot, skip, banish, votesNeeded,
 } = engine;
 
 const ROOM_PATH = /^\/battleship\/rooms\/([A-Za-z0-9]{6})$/;
@@ -57,11 +58,13 @@ export class BattleshipRoom extends DurableObject {
         phase: 'lobby',     // lobby → placing → battle → over → (play again) lobby
         players: [],        // { id, token, name, color, ready, ships }
         creator: null,
+        fleet: { ...DEFAULT_COUNTS }, // how many of each ship every player gets; the host sets it
         size: 10,
         match: null,
         votes: {},          // voter id → 'skip' | 'banish', for the current turn
         lastActive: Date.now(),
       };
+      this.room.fleet ||= { ...DEFAULT_COUNTS }; // rooms saved before fleets were configurable
     });
   }
 
@@ -164,21 +167,32 @@ export class BattleshipRoom extends DurableObject {
         return [];
       }
 
+      case 'fleet': {
+        need(room.phase === 'lobby', 'The fleet is set once the game starts');
+        need(me && me.id === this.hostId(), 'Only the host can change the fleet');
+        room.fleet = validateCounts(msg.counts);
+        return [];
+      }
+
       case 'start': {
         need(room.phase === 'lobby', 'The game has already started');
         need(me && me.id === this.hostId(), 'Only the host can start the game');
         const online = this.connectedIds();
-        room.players = room.players.filter((p) => online.has(p.id));
-        need(room.players.length >= MIN_PLAYERS, `You need at least ${MIN_PLAYERS} players`);
+        const present = room.players.filter((p) => online.has(p.id));
+        need(present.length >= MIN_PLAYERS, `You need at least ${MIN_PLAYERS} players`);
+        const size = boardSize(present.length);
+        const fleet = fleetFromCounts(room.fleet);
+        need(fleetFits(fleet, size), `${fleetSquares(fleet)} squares of ships is too many for a ${size}×${size} sea`);
+        room.players = present;
         room.phase = 'placing';
-        room.size = boardSize(room.players.length);
+        room.size = size;
         room.players.forEach((p) => { p.ready = false; p.ships = null; });
         return [{ kind: 'started', size: room.size }];
       }
 
       case 'place': {
         need(me && room.phase === 'placing', 'Ships can only be placed before the battle');
-        me.ships = validateFleet(msg.ships, room.size);
+        me.ships = validateFleet(msg.ships, room.size, fleetFromCounts(room.fleet));
         me.ready = true;
         return this.beginBattleIfReady();
       }
@@ -297,6 +311,7 @@ export class BattleshipRoom extends DurableObject {
       you: me ? me.id : null,
       host: this.hostId(exclude),
       size: room.phase === 'lobby' ? boardSize(Math.max(MIN_PLAYERS, room.players.length)) : room.size,
+      fleet: room.fleet,
       players: room.players.map((p) => ({
         id: p.id,
         name: p.name,
