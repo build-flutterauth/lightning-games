@@ -7,7 +7,7 @@ Auto-play web games. Name the players, pick a speed, and watch it go.
 - **War**: two players, one deck, high card wins, ties mean war.
 - **Candy Land**: 2–4 players race along the color path to the Candy Castle.
 
-Every game runs at Normal (2 s per turn), Fast (750 ms) or Insane (250 ms).
+Every game runs at Normal (2 s per turn), Fast (750 ms) or Insane (250 ms; War's Insane is 100 ms).
 
 ## Run locally
 

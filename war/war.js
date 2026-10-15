@@ -5,11 +5,14 @@
   const { RANKS, createGame } = window.WarEngine;
   const { SPEEDS, store, speedOptions, speedSwitch, formatClock, prefersReducedMotion } = window.Lightning;
 
+  // War's Insane is faster than the shared 250 ms: a game is ~210 flips, so 100 ms keeps it near 20 seconds.
+  const SPEED_MS = { normal: SPEEDS.normal.ms, fast: SPEEDS.fast.ms, insane: 100 };
+
   // How each speed reads for War. `eta` is the median game length from simulating 5,000 games (~210 flips).
   const SPEED_COPY = {
     normal: { blurb: 'A card every 2 seconds', eta: '~7 min game' },
     fast: { blurb: 'A card every ¾ second', eta: '~3 min game' },
-    insane: { blurb: 'Four cards a second', eta: '~1 min game' },
+    insane: { blurb: 'Ten cards a second', eta: '~20 sec game' },
   };
 
   const DEFAULT_NAMES = ['Player 1', 'Player 2'];
@@ -62,10 +65,11 @@
     game: null,
     timer: null,
     next: null, // the step the timer will run, and when
+    flippedAt: 0,
     startedAt: 0,
   };
 
-  const interval = () => SPEEDS[state.speed].ms;
+  const interval = () => SPEED_MS[state.speed];
   const animMs = () => (prefersReducedMotion() ? 0 : Math.min(MAX_ANIM_MS, interval() * 0.3));
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -86,7 +90,11 @@
     state.next = null;
   }
 
+  // Time the next flip from when this one started, so timer delays don't add up (they matter at 100 ms).
+  const untilNextFlip = () => Math.max(0, state.flippedAt + interval() - performance.now());
+
   function tick() {
+    state.flippedAt = performance.now();
     const flip = state.game.flip();
     flip.placed.forEach((placed, p) => placeCards(p, placed));
     renderCounts();
@@ -94,7 +102,7 @@
 
     if (flip.result === 'tie') {
       showCallout(WAR_CALLS[flip.warDepth - 1] || `War ×${flip.warDepth}!`);
-      schedule(tick, interval());
+      schedule(tick, untilNextFlip());
       return;
     }
 
@@ -122,7 +130,7 @@
       renderShare();
       if (result.taker !== 'split' && result.count > 2) popGain(result.taker, result.count);
       if (result.gameOver) schedule(finish, 500);
-      else schedule(tick, Math.max(0, interval() * (1 - COLLECT_AT) - ms));
+      else schedule(tick, untilNextFlip());
     }, ms);
   }
 
