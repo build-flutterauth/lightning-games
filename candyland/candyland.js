@@ -437,6 +437,8 @@
   }
 
   function animateTurn(turn, delay, duration) {
+    // No board yet (the page has no size): keep playing; it draws, pawns and all, once it has room.
+    if (!state.layout) return;
     const seat = turn.player;
     state.pawns.forEach((pawn, i) => pawn.classList.toggle('active', i === seat));
     state.pawns[seat].parentNode.append(state.pawns[seat]); // the mover draws on top
