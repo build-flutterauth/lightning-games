@@ -1,0 +1,16 @@
+name = "lightning-games"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# One Durable Object per Battleship room; it holds the only copy of where ships are.
+[[durable_objects.bindings]]
+name = "BATTLESHIP"
+class_name = "BattleshipRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BattleshipRoom"]
+
+[vars]
+# Pages that may open game connections (localhost is always allowed for development).
+ALLOWED_ORIGINS = "https://build-flutterauth.github.io"

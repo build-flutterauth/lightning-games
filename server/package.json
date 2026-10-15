@@ -1,0 +1,12 @@
+{
+  "name": "lightning-games-server",
+  "private": true,
+  "description": "Realtime game rooms for Lightning Games (Cloudflare Worker + Durable Objects).",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.151.0"
+  }
+}

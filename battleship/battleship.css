@@ -1,0 +1,786 @@
+/* Battleship — a night-sea retheme of the shared tokens, plus the board and side panel. */
+
+:root {
+  --bg: #050c1c;
+  --bg-2: #0a1630;
+  --panel: #0e1c3a;
+  --panel-2: #142650;
+  --panel-3: #1c3262;
+  --muted: #8ea3c9;
+  --water: #0b2a52;
+  --water-deep: #071d3d;
+  --grid-line: rgb(120 190 255 / 0.16);
+  --hit: #ff4d2e;
+  --stencil: 'Saira Stencil One', 'Archivo', system-ui, sans-serif;
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+}
+
+.connection {
+  margin: 0;
+  padding: 6px 12px;
+  background: #7a2d12;
+  color: #ffe2d6;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.form-error {
+  min-height: 1.2em;
+  margin: 0;
+  color: #ff8a7a;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-error:empty {
+  display: none;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* ---------- Home ---------- */
+
+.home,
+.lobby {
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 24px 16px;
+  background:
+    radial-gradient(60rem 30rem at 50% 110%, rgb(40 120 220 / 0.22), transparent 70%),
+    var(--bg);
+}
+
+.home-panel {
+  display: grid;
+  gap: 16px;
+  width: min(100%, 440px);
+}
+
+.title {
+  margin: 4px 0 0;
+  font-family: var(--stencil);
+  font-size: clamp(2.6rem, 12vw, 4.2rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.lede {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* ---------- Waiting room ---------- */
+
+.lobby-panel {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 620px);
+}
+
+.lobby-panel .panel-title {
+  margin: 0;
+}
+
+#lobby-code {
+  color: var(--bolt);
+  font-family: var(--stencil);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+.share-row,
+.join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.share-row .input,
+.join-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-row .input {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.lobby-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+  min-height: 56px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--pc);
+  border-radius: 10px;
+  background: var(--bg-2);
+  font-weight: 700;
+}
+
+/* Only names that just arrived pop in; re-renders leave the rest alone. */
+.lobby-list li.new {
+  animation: lg-pop-in 0.3s var(--ease-out);
+}
+
+.lobby-list li.offline {
+  opacity: 0.5;
+}
+
+.lobby-list .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  flex: none;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tag.host {
+  background: var(--bolt);
+  color: var(--bolt-ink);
+}
+
+.tag.you {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.remove {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lobby-foot {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.lobby-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---------- Play: sea + side panel ---------- */
+
+.play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  padding: 14px clamp(12px, 2vw, 24px);
+}
+
+.sea-wrap {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sea {
+  --n: 10;
+  --cell: clamp(14px, min((100vw - 420px) / (var(--n) + 1), (100dvh - 120px) / (var(--n) + 1)), 50px);
+  --label: max(16px, calc(var(--cell) * 0.7));
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--label) repeat(var(--n), var(--cell));
+  grid-template-rows: var(--label) repeat(var(--n), var(--cell));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.water {
+  grid-column: 2 / -1;
+  grid-row: 2 / -1;
+  border-radius: 6px;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    radial-gradient(120% 120% at 30% 20%, var(--water), var(--water-deep));
+  box-shadow: 0 0 0 1px rgb(120 190 255 / 0.25), 0 20px 50px rgb(0 0 0 / 0.45);
+}
+
+.label {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: max(9px, calc(var(--cell) * 0.36));
+  font-weight: 700;
+}
+
+.cell {
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  cursor: default;
+}
+
+.cell:focus-visible {
+  outline-offset: -2px;
+}
+
+.sea.placing .cell {
+  cursor: pointer;
+}
+
+.sea.targeting .cell.open {
+  cursor: crosshair;
+}
+
+.sea.targeting .cell.open:hover,
+.sea.targeting .cell.open:focus-visible {
+  background: rgb(255 212 59 / 0.18);
+  box-shadow: inset 0 0 0 2px var(--bolt);
+}
+
+/* Ships are grid items laid over the water; they never take clicks. */
+.ship {
+  z-index: 2;
+  margin: calc(var(--cell) * 0.12);
+  border-radius: 999px;
+  background: linear-gradient(rgb(255 255 255 / 0.28), transparent 55%), var(--pc);
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.75), 0 4px 10px rgb(0 0 0 / 0.4);
+  pointer-events: none;
+}
+
+.ship.preview {
+  background: rgb(120 255 170 / 0.25);
+  box-shadow: 0 0 0 2px #7dffae;
+  border: 0;
+}
+
+.ship.preview.bad {
+  background: rgb(255 90 90 / 0.25);
+  box-shadow: 0 0 0 2px #ff7070;
+}
+
+.ship.wreck {
+  background:
+    repeating-linear-gradient(45deg, rgb(0 0 0 / 0.45) 0 4px, transparent 4px 8px),
+    color-mix(in srgb, var(--pc) 55%, #2a2f3a);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--pc) 70%, #000);
+  opacity: 0.8;
+}
+
+.ship.mine.wreck {
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.mark {
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.mark::before {
+  content: '';
+  border-radius: 50%;
+}
+
+.mark.miss::before {
+  width: 30%;
+  height: 30%;
+  background: rgb(220 240 255 / 0.75);
+  box-shadow: 0 0 0 calc(var(--cell) * 0.08) rgb(220 240 255 / 0.18);
+}
+
+.mark.hit::before {
+  width: 58%;
+  height: 58%;
+  background: radial-gradient(circle at 40% 35%, #fff2c4, #ffb02e 35%, var(--hit) 70%);
+  box-shadow: 0 0 calc(var(--cell) * 0.35) rgb(255 90 40 / 0.8);
+}
+
+.mark.aim::before {
+  width: 86%;
+  height: 86%;
+  border: 2px solid var(--bolt);
+  background: rgb(255 212 59 / 0.22);
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  to { transform: scale(0.8); }
+}
+
+.mark.latest::after {
+  content: '';
+  position: absolute;
+  width: var(--cell);
+  height: var(--cell);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bolt);
+  animation: ping 1.2s ease-out 2;
+}
+
+@keyframes ping {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.status {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--pc, var(--bolt));
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.status h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  font-stretch: 110%;
+  line-height: 1.15;
+}
+
+.status p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.status.mine {
+  border-color: var(--bolt);
+  box-shadow: 0 0 0 2px rgb(255 212 59 / 0.25);
+}
+
+.clock {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dock {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.ships {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ship-pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ship-pick[aria-pressed='true'] {
+  border-color: var(--bolt);
+  box-shadow: inset 0 0 0 1px var(--bolt);
+}
+
+.ship-pick.placed {
+  color: var(--muted);
+}
+
+.ship-pick.placed .name::after {
+  content: ' ✓';
+  color: #7dffae;
+}
+
+.ship-size {
+  display: flex;
+  gap: 3px;
+}
+
+.ship-size i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--pc);
+}
+
+.ship-pick.placed .ship-size i {
+  opacity: 0.4;
+}
+
+.dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.done {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.votes {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.votes p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.vote-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.vote-buttons .btn[aria-pressed='true'] {
+  border-color: var(--bolt);
+  background: var(--panel-3);
+  color: var(--bolt);
+}
+
+.roster,
+.log {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.roster li.turn {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 var(--pc);
+}
+
+.roster li.out {
+  opacity: 0.45;
+}
+
+.roster li.out .name {
+  text-decoration: line-through;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pc);
+}
+
+.roster .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pips {
+  display: flex;
+  gap: 2px;
+}
+
+.pips i {
+  width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--pc);
+}
+
+.pips i.gone {
+  background: var(--panel-3);
+}
+
+.log {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.log li strong {
+  color: var(--text);
+}
+
+.log li.big {
+  color: #ffb4a6;
+  font-weight: 700;
+}
+
+/* ---------- The collision announcement ---------- */
+
+.announce {
+  z-index: 60;
+  background:
+    radial-gradient(circle at 50% 45%, rgb(255 90 40 / 0.55), rgb(80 10 0 / 0.85) 60%, rgb(5 5 12 / 0.95));
+  animation: flash 0.6s ease-out;
+}
+
+.announce.clear {
+  background: radial-gradient(circle at 50% 45%, rgb(40 160 255 / 0.4), rgb(5 12 28 / 0.95) 65%);
+}
+
+@keyframes flash {
+  0% { background-color: #fff; opacity: 0; }
+  15% { opacity: 1; }
+}
+
+.announce-body {
+  width: min(100%, 760px);
+  max-height: 100%;
+  overflow: auto;
+  text-align: center;
+  animation: shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) 2;
+}
+
+.announce.clear .announce-body {
+  animation: lg-pop-in 0.4s var(--ease-out);
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate(-2px, 1px); }
+  20%, 80% { transform: translate(4px, -2px); }
+  30%, 50%, 70% { transform: translate(-8px, 3px) rotate(-1deg); }
+  40%, 60% { transform: translate(8px, -3px) rotate(1deg); }
+}
+
+.announce-kicker {
+  margin: 0;
+  color: #ffd1c2;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.announce-title {
+  margin: 4px 0 18px;
+  color: #fff4e6;
+  font-family: var(--stencil);
+  font-size: clamp(3rem, 14vw, 7rem);
+  font-weight: 400;
+  line-height: 0.9;
+  text-shadow: 0 0 30px rgb(255 120 60 / 0.9), 0 4px 0 #6b1500;
+  text-transform: uppercase;
+}
+
+.announce.clear .announce-title {
+  text-shadow: 0 0 30px rgb(60 170 255 / 0.8);
+}
+
+.announce-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.announce-list li {
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  padding: 0.5em 0.9em;
+  border-radius: 12px;
+  background: rgb(10 10 20 / 0.6);
+  box-shadow: inset 0 0 0 2px var(--pc);
+  text-align: left;
+}
+
+.announce-list b {
+  color: var(--pc);
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 900;
+}
+
+.announce-list span {
+  color: #ffe9e0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.announce-out {
+  margin: 0 0 20px;
+  color: #ffe0d6;
+  font-size: clamp(1rem, 2.6vw, 1.3rem);
+  font-weight: 800;
+}
+
+.announce-out:empty {
+  display: none;
+}
+
+/* ---------- Result ---------- */
+
+.result .panel-title {
+  color: var(--pc, var(--text));
+}
+
+/* ---------- Toasts ---------- */
+
+.toasts {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  z-index: 70;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: min(92vw, 480px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  padding: 10px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--panel-2);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+  font-weight: 700;
+  text-align: center;
+  animation: lg-pop-in 0.25s var(--ease-out);
+}
+
+.toast.big {
+  border-color: var(--hit);
+  background: #3a1210;
+  font-size: 1.05rem;
+}
+
+/* ---------- Phones and narrow windows: board on top, panel below ---------- */
+
+@media (max-width: 860px) {
+  .play {
+    grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    align-content: start;
+    overflow: auto;
+    padding: 10px;
+  }
+
+  /* The whole sea fits the screen width, even 26×26; touch aims first, so small squares are fine. */
+  .sea {
+    --cell: clamp(12px, (100vw - 28px) / (var(--n) + 0.8), 40px);
+  }
+
+  .sea-wrap {
+    place-items: start center;
+    overflow: auto hidden;
+  }
+
+  /* Status and votes sit above the board, where a phone player is looking. */
+  .side {
+    display: contents;
+  }
+
+  .status,
+  .votes {
+    order: -1;
+  }
+
+  .ships {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ship-pick {
+    padding: 7px 9px;
+    font-size: 0.88rem;
+  }
+
+  .announce-list li {
+    min-width: min(180px, 40vw);
+  }
+
+  .ship-pick.placed {
+    border-color: rgb(125 255 174 / 0.45);
+  }
+
+  .ship-pick.placed .name::after {
+    content: none;
+  }
+
+  .ship-size i {
+    width: 10px;
+    height: 10px;
+  }
+}

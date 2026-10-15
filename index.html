@@ -128,6 +128,32 @@
       transform: translateY(calc(sin(var(--i) * 0.9) * 16px));
     }
 
+    .sea-art {
+      background: radial-gradient(120% 120% at 30% 20%, #0b2a52, #071d3d);
+    }
+
+    .sea-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 18px);
+      grid-template-rows: repeat(6, 18px);
+      background:
+        linear-gradient(rgb(120 190 255 / 0.18) 1px, transparent 1px) 0 0 / 18px 18px,
+        linear-gradient(90deg, rgb(120 190 255 / 0.18) 1px, transparent 1px) 0 0 / 18px 18px;
+    }
+
+    .sea-grid i {
+      margin: 3px;
+      border-radius: 999px;
+      background: var(--c);
+    }
+
+    .sea-grid b {
+      margin: 4px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #fff2c4, #ffb02e 35%, #ff4d2e 70%);
+      box-shadow: 0 0 8px rgb(255 90 40 / 0.8);
+    }
+
     .tile-body {
       padding: 18px 20px 20px;
     }
@@ -190,6 +216,22 @@
           <h2>Candy Land</h2>
           <p>Draw a card, follow the colors, and race to the Candy Castle.</p>
           <div class="tags"><span>2–4 players</span><span>64 cards</span><span>3 speeds</span></div>
+        </div>
+      </a>
+      <a class="tile" href="battleship/">
+        <div class="tile-art sea-art" aria-hidden="true">
+          <div class="sea-grid">
+            <i style="--c:#3fb4ff;grid-area:2/2/3/6"></i>
+            <i style="--c:#ff5a6e;grid-area:3/7/7/8"></i>
+            <i style="--c:#7dffae;grid-area:5/2/6/5"></i>
+            <b style="grid-area:2/4"></b>
+            <b style="grid-area:4/7"></b>
+          </div>
+        </div>
+        <div class="tile-body">
+          <h2>Battleship</h2>
+          <p>Live multiplayer on one shared sea. Overlapping ships sink before the first shot.</p>
+          <div class="tags"><span>2–20 players</span><span>Online</span><span>Share a link</span></div>
         </div>
       </a>
     </section>
