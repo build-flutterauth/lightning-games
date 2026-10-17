@@ -83,6 +83,8 @@
     offset: 0, // server clock minus ours
     joining: null, // name to join with once connected
     retries: 0,
+    retryTimer: 0,
+    pingTimer: 0, // waiting for the server to answer a connection check
     seaSize: 0,
     placing: { ships: {}, selected: 'carrier', dir: 'h', hover: null },
     log: [],
@@ -97,24 +99,23 @@
 
   /* ---------- Connection ---------- */
 
-  // Your seat lives in this tab's session storage: a refresh keeps it, and a second tab
-  // (or a friend on the same computer) joins as a separate player.
-  const seatKey = () => `lightning:battleship.seat.${app.code}`;
+  // Your seat is remembered by this browser, not just this tab: phones often throw away a
+  // backgrounded tab, or reopen the game link in a new one, and you should land back in your
+  // seat either way. (To play two players on one computer, use a private window for one.)
+  const seatKey = () => `battleship.seat.${app.code}`;
   const seats = {
     get() {
+      const saved = store.get(seatKey(), null);
+      if (saved) return saved;
+      // Seats saved by the earlier version of this page lived in the tab's session storage.
       try {
-        return JSON.parse(sessionStorage.getItem(seatKey()));
+        return JSON.parse(sessionStorage.getItem(`lightning:${seatKey()}`));
       } catch {
         return null;
       }
     },
     set(seat) {
-      try {
-        if (seat) sessionStorage.setItem(seatKey(), JSON.stringify(seat));
-        else sessionStorage.removeItem(seatKey());
-      } catch {
-        /* not saved: a refresh will mean joining again */
-      }
+      store.set(seatKey(), seat);
     },
   };
 
@@ -130,6 +131,7 @@
   }
 
   function connect() {
+    clearTimeout(app.retryTimer);
     const ws = new WebSocket(`${SERVER}/battleship/rooms/${app.code}`);
     app.ws = ws;
     ws.onopen = () => {
@@ -139,13 +141,39 @@
       else if (app.joining) send({ type: 'join', name: app.joining });
       app.joining = null;
     };
-    ws.onmessage = (e) => receive(JSON.parse(e.data));
+    ws.onmessage = (e) => {
+      if (e.data === 'pong') {
+        clearTimeout(app.pingTimer);
+        return;
+      }
+      receive(JSON.parse(e.data));
+    };
     ws.onclose = () => {
       if (app.ws !== ws) return;
       ui.connection.hidden = false;
       ui.connection.textContent = app.retries > 2 ? "Can't reach the game server. Still trying…" : 'Reconnecting…';
-      setTimeout(connect, Math.min(8000, 500 * 2 ** app.retries++));
+      app.retryTimer = setTimeout(connect, Math.min(8000, 500 * 2 ** app.retries++));
     };
+  }
+
+  // Coming back to the page (switching apps or tabs on a phone): the connection may have died
+  // while the page was asleep without the browser noticing, so check it now rather than later.
+  function checkConnection() {
+    if (!app.code || document.visibilityState === 'hidden') return;
+    const ws = app.ws;
+    if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) return reconnectNow();
+    if (ws.readyState !== WebSocket.OPEN) return;
+    ws.send('ping');
+    clearTimeout(app.pingTimer);
+    app.pingTimer = setTimeout(reconnectNow, 4000); // no pong: that socket is dead
+  }
+
+  function reconnectNow() {
+    const old = app.ws;
+    app.ws = null; // so the old socket's close doesn't schedule a second reconnect
+    try { old?.close(); } catch { /* already gone */ }
+    app.retries = 0;
+    connect();
   }
 
   function send(msg) {
@@ -154,7 +182,8 @@
 
   function receive(msg) {
     if (msg.type === 'seat') {
-      app.seat = { playerId: msg.playerId, token: msg.token };
+      // A null seat means the server doesn't know the one we offered (e.g. removed by the host).
+      app.seat = msg.playerId ? { playerId: msg.playerId, token: msg.token } : null;
       seats.set(app.seat);
     } else if (msg.type === 'error') {
       if (app.state?.phase === 'lobby') ui.lobbyError.textContent = msg.message;
@@ -989,4 +1018,7 @@
     ui.homeName.focus();
   }
   window.addEventListener('popstate', () => location.reload());
+  document.addEventListener('visibilitychange', checkConnection);
+  window.addEventListener('pageshow', (event) => { if (event.persisted) checkConnection(); });
+  window.addEventListener('online', checkConnection);
 })();

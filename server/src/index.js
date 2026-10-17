@@ -53,6 +53,9 @@ const randomId = (length) => {
 export class BattleshipRoom extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
+    // Pages check their connection with "ping" when they come back from the background;
+    // this answers without waking the room.
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
     ctx.blockConcurrencyWhile(async () => {
       this.room = (await ctx.storage.get('room')) || {
         phase: 'lobby',     // lobby → placing → battle → over → (play again) lobby
@@ -77,6 +80,7 @@ export class BattleshipRoom extends DurableObject {
   }
 
   async webSocketMessage(ws, raw) {
+    if (raw === 'ping') return ws.send('pong');
     if (typeof raw !== 'string' || raw.length > 10000) return;
     let msg;
     try {
@@ -132,7 +136,8 @@ export class BattleshipRoom extends DurableObject {
         // Re-attach a returning player (refresh, dropped connection) by their secret token.
         const player = room.players.find((p) => p.id === msg.playerId && p.token === msg.token);
         ws.serializeAttachment({ playerId: player ? player.id : null });
-        if (player) ws.send(JSON.stringify({ type: 'seat', playerId: player.id, token: player.token }));
+        // Always answer, so a page holding a seat we don't know can forget it.
+        ws.send(JSON.stringify({ type: 'seat', playerId: player?.id ?? null, token: player?.token ?? null }));
         return [];
       }
 

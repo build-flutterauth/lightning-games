@@ -177,6 +177,16 @@ async function gameWithVotes() {
   await bots[0].waitFor((b) => b.state.players.find((p) => p.id === seat.playerId).connected, 'back online');
   console.log('  reconnecting kept the seat');
 
+  // A page offering a seat the room doesn't know is told so (and stays a watcher).
+  const stranger = new Bot(bots[0].code, 'Stranger');
+  await stranger.connect();
+  stranger.seat = { playerId: 'x' };
+  stranger.send({ type: 'hello', playerId: seat.playerId, token: 'not-the-token' });
+  await stranger.waitFor((b) => b.seat?.playerId === null, 'an unknown-seat answer');
+  assert.equal(stranger.state.you, null);
+  stranger.ws.close();
+  console.log('  a wrong seat token is refused');
+
   // Banish whoever is up, if anyone else is still afloat to vote.
   if (bots[0].state.phase === 'battle' && voters().length >= 1) {
     const target = current();
