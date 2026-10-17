@@ -945,7 +945,7 @@
           const text = `${nameOf(event.by)} sank ${event.sunk.owner === event.by ? 'their own' : `${nameOf(event.sunk.owner)}'s`} ${event.sunk.name}!`;
           log(text, true);
           toast(text, true);
-          sound.boom();
+          sound.sunk();
         } else if (event.hit) sound.hit();
         else sound.miss();
         break;
@@ -1017,7 +1017,7 @@
     ui.announce.querySelector('.announce-body').scrollTop = 0;
     ui.announceClose.focus({ preventScroll: true });
     if (sunk.length) {
-      sound.boom(true);
+      sound.collision(sunk.length);
       navigator.vibrate?.([300, 100, 300]);
     }
     clearTimeout(app.announceTimer);
@@ -1042,67 +1042,34 @@
     setTimeout(() => el.remove(), big ? 4500 : 3000);
   }
 
-  /* ---------- Sound: synthesized, so there are no files to load ---------- */
+  /* ---------- Sound (the effects themselves are in sounds.js) ---------- */
 
   const sound = (function () {
+    const fx = window.BattleshipSounds;
     let ctx = null;
     let on = store.get('battleship.sound', true);
-    const audio = () => {
-      if (!on) return null;
+    const play = (effect, ...args) => {
+      if (!on) return;
       try {
         ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
         if (ctx.state === 'suspended') ctx.resume();
-        return ctx;
+        effect(ctx, ctx.destination, ctx.currentTime, ...args);
       } catch {
-        return null;
+        /* no audio here; the game works without it */
       }
     };
-    function noise(duration, from, to, gain) {
-      const c = audio();
-      if (!c) return;
-      const buffer = c.createBuffer(1, Math.floor(c.sampleRate * duration), c.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      const src = c.createBufferSource();
-      src.buffer = buffer;
-      const filter = c.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(from, c.currentTime);
-      filter.frequency.exponentialRampToValueAtTime(to, c.currentTime + duration);
-      const g = c.createGain();
-      g.gain.setValueAtTime(gain, c.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
-      src.connect(filter).connect(g).connect(c.destination);
-      src.start();
-    }
-    function tone(freq, duration, gain, delay = 0) {
-      const c = audio();
-      if (!c) return;
-      const t = c.currentTime + delay;
-      const osc = c.createOscillator();
-      osc.frequency.setValueAtTime(freq, t);
-      const g = c.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(gain, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-      osc.connect(g).connect(c.destination);
-      osc.start(t);
-      osc.stop(t + duration + 0.05);
-    }
     return {
       get on() { return on; },
       toggle() {
         on = !on;
         store.set('battleship.sound', on);
       },
-      boom(huge) {
-        noise(huge ? 2.2 : 1.3, 1400, 50, huge ? 1 : 0.7);
-        tone(48, huge ? 1.2 : 0.7, 0.5);
-      },
-      hit: () => noise(0.45, 1000, 120, 0.5),
-      miss: () => noise(0.3, 3500, 700, 0.2),
-      ping: () => { tone(880, 0.18, 0.15); tone(1320, 0.25, 0.12, 0.12); },
-      fanfare: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, 0.14, i * 0.13)),
+      hit: () => play(fx.fart),
+      sunk: () => play(fx.scream, { pitch: 0.9 + Math.random() * 0.35 }),
+      collision: (sunk) => play(fx.collision, sunk),
+      miss: () => play(fx.splash),
+      ping: () => play(fx.ping),
+      fanfare: () => play(fx.fanfare),
     };
   })();
 
