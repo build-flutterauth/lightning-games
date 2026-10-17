@@ -11,7 +11,7 @@ import engine from '../../battleship/battleship-engine.js';
 
 const {
   DEFAULT_COUNTS, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
-  boardSize, validateCounts, fleetFromCounts, fleetSquares, fleetFits,
+  validateSize, boardSize, validateCounts, fleetFromCounts, fleetSquares, fleetFits,
   validateFleet, createMatch, alivePlayers, shoot, skip, banish, votesNeeded,
 } = engine;
 
@@ -62,6 +62,7 @@ export class BattleshipRoom extends DurableObject {
         players: [],        // { id, token, name, color, ready, ships }
         creator: null,
         fleet: { ...DEFAULT_COUNTS }, // how many of each ship every player gets; the host sets it
+        seaSize: null,      // the host's sea size, or null to grow with the players
         size: 10,
         match: null,
         votes: {},          // voter id → 'skip' | 'banish', for the current turn
@@ -172,6 +173,13 @@ export class BattleshipRoom extends DurableObject {
         return [];
       }
 
+      case 'sea': {
+        need(room.phase === 'lobby', 'The sea is set once the game starts');
+        need(me && me.id === this.hostId(), 'Only the host can change the sea');
+        room.seaSize = validateSize(msg.size ?? null);
+        return [];
+      }
+
       case 'fleet': {
         need(room.phase === 'lobby', 'The fleet is set once the game starts');
         need(me && me.id === this.hostId(), 'Only the host can change the fleet');
@@ -185,7 +193,7 @@ export class BattleshipRoom extends DurableObject {
         const online = this.connectedIds();
         const present = room.players.filter((p) => online.has(p.id));
         need(present.length >= MIN_PLAYERS, `You need at least ${MIN_PLAYERS} players`);
-        const size = boardSize(present.length);
+        const size = room.seaSize ?? boardSize(present.length);
         const fleet = fleetFromCounts(room.fleet);
         need(fleetFits(fleet, size), `${fleetSquares(fleet)} squares of ships is too many for a ${size}×${size} sea`);
         room.players = present;
@@ -315,7 +323,8 @@ export class BattleshipRoom extends DurableObject {
       phase: room.phase,
       you: me ? me.id : null,
       host: this.hostId(exclude),
-      size: room.phase === 'lobby' ? boardSize(Math.max(MIN_PLAYERS, room.players.length)) : room.size,
+      size: room.phase === 'lobby' ? room.seaSize ?? boardSize(Math.max(MIN_PLAYERS, room.players.length)) : room.size,
+      seaAuto: room.seaSize == null,
       fleet: room.fleet,
       players: room.players.map((p) => ({
         id: p.id,

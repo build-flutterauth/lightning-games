@@ -18,11 +18,22 @@
   // The host picks how many of each type every player gets; this is the classic fleet.
   const DEFAULT_COUNTS = { carrier: 1, battleship: 1, cruiser: 1, submarine: 1, destroyer: 1 };
   const MAX_PER_TYPE = 4;
+  const MIN_SIZE = 10; // the host may pick any square sea from 10x10 to 26x26 (A-Z)
+  const MAX_SIZE = 26;
   const MIN_PLAYERS = 2;
   const MAX_PLAYERS = 20;
   const VOTE_DELAY_MS = 20000; // each player gets this long before others may vote to skip or banish them
 
   // 2–4 players share a 10×10 sea; from 5 players on, each extra player adds a row and a column.
+  // The host's choice of sea size: null means "grow with the players" (boardSize).
+  function validateSize(size) {
+    if (size === null) return null;
+    if (!Number.isInteger(size) || size < MIN_SIZE || size > MAX_SIZE) {
+      throw new Error(`Pick a sea from ${MIN_SIZE}x${MIN_SIZE} to ${MAX_SIZE}x${MAX_SIZE}`);
+    }
+    return size;
+  }
+
   function boardSize(players) {
     return players <= 4 ? 10 : players + 6;
   }
@@ -261,8 +272,8 @@
   }
 
   const api = {
-    SHIP_TYPES, DEFAULT_COUNTS, MAX_PER_TYPE, FLEET, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
-    boardSize, shipCells, covers, validateCounts, fleetFromCounts, fleetSquares, fleetFits, validateFleet, randomFleet,
+    SHIP_TYPES, DEFAULT_COUNTS, MAX_PER_TYPE, FLEET, MIN_SIZE, MAX_SIZE, MIN_PLAYERS, MAX_PLAYERS, VOTE_DELAY_MS,
+    validateSize, boardSize, shipCells, covers, validateCounts, fleetFromCounts, fleetSquares, fleetFits, validateFleet, randomFleet,
     createMatch, alivePlayers, isTargetable, shoot, skip, banish, votesNeeded,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

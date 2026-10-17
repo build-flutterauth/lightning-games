@@ -48,10 +48,15 @@
     lobbyWait: $('lobby-wait'),
     play: $('play'),
     sea: $('sea'),
+    seaWrap: $('sea-wrap'),
+    zoomBar: $('zoom-bar'),
+    zoomIn: $('zoom-in'),
+    zoomOut: $('zoom-out'),
+    zoomFit: $('zoom-fit'),
+    seaSetup: $('sea-setup'),
     status: $('status'),
     dock: $('dock'),
     dockShips: $('dock-ships'),
-    rotate: $('rotate'),
     randomize: $('randomize'),
     clear: $('clear'),
     done: $('done'),
@@ -86,7 +91,8 @@
     retryTimer: 0,
     pingTimer: 0, // waiting for the server to answer a connection check
     seaSize: 0,
-    placing: { ships: {}, selected: 'carrier', dir: 'h', hover: null },
+    placing: { ships: {}, draft: null, selected: 'carrier', dir: 'h', hover: null },
+    zoom: 1, // phones only, on seas of 16 or more
     log: [],
     latestShot: null,
     aim: null, // on touch screens: the square you've tapped once
@@ -267,6 +273,7 @@
     if (!s.players.length) ui.lobbyList.innerHTML = '<li class="offline"><span class="name">Nobody here yet</span></li>';
 
     ui.lobbySize.textContent = `${plural(s.players.length, 'player')} → ${s.size}×${s.size} sea`;
+    renderSeaSetup();
     const fits = renderFleetSetup();
     ui.start.hidden = s.you !== s.host;
     ui.start.disabled = online < E.MIN_PLAYERS || !fits;
@@ -276,6 +283,46 @@
       : s.you === s.host
         ? online < E.MIN_PLAYERS ? 'Waiting for at least one more player.' : 'Start when everyone is in.'
         : `Waiting for ${host ? host.name : 'the host'} to start…`;
+  }
+
+  // The host picks the sea size (10-26), or leaves it to grow with the players.
+  function renderSeaSetup() {
+    const s = app.state;
+    const label = document.createElement('output');
+    label.textContent = `${s.size}\u00d7${s.size}`;
+    const note = document.createElement('span');
+    note.className = 'hint';
+    note.textContent = s.seaAuto ? 'grows with the players' : 'set by the host';
+    if (s.you !== s.host) {
+      ui.seaSetup.replaceChildren(label, note);
+      return;
+    }
+    const step = (text, aria, disabled, size) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = text;
+      button.disabled = disabled;
+      button.setAttribute('aria-label', aria);
+      button.addEventListener('click', () => send({ type: 'sea', size }));
+      return button;
+    };
+    const auto = document.createElement('button');
+    auto.type = 'button';
+    auto.className = 'auto';
+    auto.textContent = 'Auto';
+    auto.setAttribute('aria-pressed', String(!!s.seaAuto));
+    auto.title = 'Grow the sea with the number of players';
+    auto.addEventListener('click', () => send({ type: 'sea', size: null }));
+    ui.seaSetup.replaceChildren(
+      Object.assign(document.createElement('span'), { className: 'stepper' }),
+      auto,
+      note
+    );
+    ui.seaSetup.firstChild.append(
+      step('\u2212', 'Smaller sea', s.size <= E.MIN_SIZE, s.size - 1),
+      label,
+      step('+', 'Bigger sea', s.size >= E.MAX_SIZE, s.size + 1)
+    );
   }
 
   // The host sets how many of each ship type everyone gets; others see the choice live.
@@ -332,9 +379,10 @@
   function buildSea(size) {
     app.seaSize = size;
     ui.sea.style.setProperty('--n', size);
-    const parts = ['<div class="water"></div>'];
-    for (let x = 0; x < size; x++) parts.push(`<span class="label" style="grid-area:1/${x + 2}">${LETTERS[x]}</span>`);
-    for (let y = 0; y < size; y++) parts.push(`<span class="label" style="grid-area:${y + 2}/1">${y + 1}</span>`);
+    setZoom(1);
+    const parts = ['<div class="water"></div>', '<span class="label corner" style="grid-area:1/1"></span>'];
+    for (let x = 0; x < size; x++) parts.push(`<span class="label col" style="grid-area:1/${x + 2}">${LETTERS[x]}</span>`);
+    for (let y = 0; y < size; y++) parts.push(`<span class="label row" style="grid-area:${y + 2}/1">${y + 1}</span>`);
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         parts.push(`<button class="cell" type="button" data-x="${x}" data-y="${y}" style="grid-area:${y + 2}/${x + 2}" aria-label="${coord(x, y)}"></button>`);
@@ -355,7 +403,9 @@
   function renderBoard() {
     const s = app.state;
     if (app.seaSize !== s.size) buildSea(s.size);
-    ui.sea.querySelectorAll('.ship, .mark').forEach((n) => n.remove());
+    ui.sea.querySelectorAll('.ship, .mark, .edit').forEach((n) => n.remove());
+    ui.zoomBar.hidden = !zoomable();
+    if (ui.zoomBar.hidden && app.zoom !== 1) setZoom(1);
 
     const mine = me();
     const myColor = mine ? colorOf(mine.color) : 'var(--muted)';
@@ -369,8 +419,12 @@
       const ships = placing ? placedShips() : s.myShips || [];
       ships.forEach((ship) => layer.append(shipEl(ship, 'mine', myColor)));
       if (placing) {
-        const preview = previewShip();
-        if (preview) layer.append(shipEl(preview.ship, `preview${preview.ok ? '' : ' bad'}`, myColor));
+        const draft = draftShip();
+        if (draft) layer.append(...editorEls(draft, myColor));
+        else {
+          const preview = previewShip();
+          if (preview) layer.append(shipEl(preview.ship, `preview${preview.ok ? '' : ' bad'}`, myColor));
+        }
       }
     } else {
       s.wrecks.forEach((ship) => {
@@ -428,82 +482,198 @@
 
   /* ---------- Placing ships ---------- */
 
+  /*
+   * A tap drops the outline of the next ship. While it's an outline, arrows swing it a
+   * quarter turn about either end, the check keeps it, and the trash can removes it.
+   * Tapping a kept ship turns it back into an outline to change it.
+   */
+
   function resetPlacement() {
     const own = app.state.myShips;
-    app.placing = { ships: {}, selected: fleet()[0]?.id || null, dir: 'h', hover: null };
+    app.placing = { ships: {}, draft: null, selected: fleet()[0]?.id || null, dir: 'h', hover: null };
     if (own) own.forEach((ship) => { app.placing.ships[ship.id] = { x: ship.x, y: ship.y, dir: ship.dir }; });
     if (own) app.placing.selected = null;
   }
 
   const spec = (id) => fleet().find((s) => s.id === id);
+  const sized = (id, pos) => ({ id, name: spec(id).name, size: spec(id).size, x: pos.x, y: pos.y, dir: pos.dir });
+  const nextUnplaced = () => fleet().find((s) => !app.placing.ships[s.id] && app.placing.draft?.id !== s.id)?.id || null;
 
+  // Kept ships (not the outline being edited).
   function placedShips() {
-    return fleet()
-      .filter((s) => app.placing.ships[s.id])
-      .map((s) => ({ id: s.id, name: s.name, size: s.size, ...app.placing.ships[s.id] }));
+    return fleet().filter((s) => app.placing.ships[s.id]).map((s) => sized(s.id, app.placing.ships[s.id]));
   }
 
-  // Where the selected ship would go if dropped at (x, y): pulled back onto the board, and
-  // checked against your own ships (other players' ships are invisible, so they can't be).
-  function candidate(x, y) {
-    const { selected, dir } = app.placing;
-    if (!selected) return null;
+  const draftShip = () => (app.placing.draft ? sized(app.placing.draft.id, app.placing.draft) : null);
+
+  // On the sea and clear of your other ships (other players' ships are invisible, so they can't count).
+  function fitsOwn(ship) {
     const size = app.state.size;
-    const len = spec(selected).size;
-    const ship = {
-      id: selected,
-      size: len,
-      dir,
-      x: dir === 'h' ? Math.min(x, size - len) : x,
-      y: dir === 'v' ? Math.min(y, size - len) : y,
-    };
-    const others = placedShips().filter((s) => s.id !== selected);
-    const ok = !E.shipCells(ship).some(([cx, cy]) => others.some((o) => E.covers(o, cx, cy)));
-    return { ship, ok };
+    const cells = E.shipCells(ship);
+    if (cells.some(([x, y]) => x < 0 || y < 0 || x >= size || y >= size)) return false;
+    const others = placedShips().filter((s) => s.id !== ship.id);
+    return !cells.some(([x, y]) => others.some((o) => E.covers(o, x, y)));
+  }
+
+  // The bow goes on the tapped square; a ship that would hang off the edge is pulled back on.
+  function outlineAt(id, x, y, dir) {
+    const size = app.state.size;
+    const len = spec(id).size;
+    return { id, dir, x: dir === 'h' ? Math.min(x, size - len) : x, y: dir === 'v' ? Math.min(y, size - len) : y };
   }
 
   function previewShip() {
-    const { hover } = app.placing;
-    return hover ? candidate(hover.x, hover.y) : null;
+    const { hover, selected, dir } = app.placing;
+    if (!hover || !selected) return null;
+    const ship = sized(selected, outlineAt(selected, hover.x, hover.y, dir));
+    return { ship, ok: fitsOwn(ship) };
+  }
+
+  // Quarter turns about either end, keeping only the ones that stay on the sea and clear of
+  // your other ships. Each arrow sits just past the end it pivots on, pointing the new way.
+  function turns(ship) {
+    const { x, y, size: n } = ship;
+    const options = [];
+    if (ship.dir === 'h') {
+      for (const end of [x, x + n - 1]) {
+        options.push({ arrow: 'up', at: [end, y - 1], to: { x: end, y: y - n + 1, dir: 'v' } });
+        options.push({ arrow: 'down', at: [end, y + 1], to: { x: end, y, dir: 'v' } });
+      }
+    } else {
+      for (const end of [y, y + n - 1]) {
+        options.push({ arrow: 'left', at: [x - 1, end], to: { x: x - n + 1, y: end, dir: 'h' } });
+        options.push({ arrow: 'right', at: [x + 1, end], to: { x, y: end, dir: 'h' } });
+      }
+    }
+    return options.filter((t) => fitsOwn(sized(ship.id, t.to)));
+  }
+
+  // The check and trash can go below the outline, past any down arrows; near the bottom
+  // of the sea, they go above it instead.
+  function controlSquares(ship, options) {
+    const size = app.state.size;
+    const { x, y, size: n } = ship;
+    if (ship.dir === 'h') {
+      const below = y + (options.some((t) => t.arrow === 'down') ? 2 : 1);
+      const above = y - (options.some((t) => t.arrow === 'up') ? 2 : 1);
+      const row = below < size ? below : above >= 0 ? above : y + 1 < size ? y + 1 : y - 1;
+      return { keep: [x, row], trash: [x + n - 1, row] };
+    }
+    const row = y + n < size ? y + n : y - 1;
+    return { keep: [x, row], trash: [x + 1 < size ? x + 1 : x - 1, row] };
+  }
+
+  const ICONS = {
+    arrow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 1.5 11.5H8V23h8V11.5h6.5z"/></svg>',
+    keep: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5"/></svg>',
+  };
+
+  function editButton(kind, [x, y], label, icon, data = {}) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `edit ${kind}`;
+    button.style.gridArea = `${y + 2}/${x + 2}`;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.innerHTML = icon;
+    Object.assign(button.dataset, { edit: kind.split(' ')[0], ...data });
+    return button;
+  }
+
+  function editorEls(ship, color) {
+    const ok = fitsOwn(ship);
+    const options = turns(ship);
+    const { keep, trash } = controlSquares(ship, options);
+    const keepButton = editButton('keep', keep, `Keep the ${ship.name} here`, ICONS.keep);
+    keepButton.disabled = !ok;
+    return [
+      shipEl(ship, `draft${ok ? '' : ' bad'}`, color),
+      ...options.map((t, i) => editButton(`turn ${t.arrow}`, t.at, `Turn the ${ship.name} ${t.arrow}`, ICONS.arrow, { turn: i })),
+      keepButton,
+      editButton('trash', trash, `Remove the ${ship.name}`, ICONS.trash),
+    ];
   }
 
   function placeAt(x, y) {
     const placing = app.placing;
-    const there = placedShips().find((s) => E.covers(s, x, y));
-    if (there && there.id !== placing.selected) {
-      // Pick an already placed ship back up.
-      delete placing.ships[there.id];
-      placing.selected = there.id;
-      placing.dir = there.dir;
-    } else {
-      const c = candidate(x, y);
-      if (!c) return;
-      if (!c.ok) return toast("Your ships can't overlap each other");
-      placing.ships[c.ship.id] = { x: c.ship.x, y: c.ship.y, dir: c.ship.dir };
-      placing.selected = fleet().find((s) => !placing.ships[s.id])?.id || null;
-    }
-    renderBoard();
-    renderDock();
+    const draft = draftShip();
+    if (draft && E.covers(draft, x, y)) return; // tapping the outline itself changes nothing
+    const kept = placedShips().find((s) => E.covers(s, x, y));
+    if (kept) editShip(kept.id);
+    else if (placing.draft) placing.draft = outlineAt(placing.draft.id, x, y, placing.draft.dir); // move it
+    else if (placing.selected) placing.draft = outlineAt(placing.selected, x, y, placing.dir);
+    else return;
+    placing.hover = null;
+    renderPlacement();
   }
 
+  // Before starting on another ship, keep the current outline if it fits; otherwise it goes back to the dock.
+  function settleDraft() {
+    const draft = draftShip();
+    if (draft && fitsOwn(draft)) app.placing.ships[draft.id] = { x: draft.x, y: draft.y, dir: draft.dir };
+    app.placing.draft = null;
+  }
+
+  function editShip(id) {
+    settleDraft();
+    const pos = app.placing.ships[id];
+    delete app.placing.ships[id];
+    app.placing.draft = { id, ...pos };
+    app.placing.selected = id;
+  }
+
+  function onEdit(button) {
+    const placing = app.placing;
+    const draft = draftShip();
+    if (!draft) return;
+    const action = button.dataset.edit;
+    if (action === 'turn') {
+      placing.draft = { id: draft.id, ...turns(draft)[+button.dataset.turn].to };
+    } else if (action === 'keep') {
+      if (!fitsOwn(draft)) return;
+      placing.ships[draft.id] = { x: draft.x, y: draft.y, dir: draft.dir };
+      placing.dir = draft.dir;
+      placing.draft = null;
+      placing.selected = nextUnplaced();
+    } else if (action === 'trash') {
+      placing.draft = null;
+      placing.selected = draft.id;
+    }
+    renderPlacement();
+  }
+
+  // R or right-click: turn the outline in place (or, with no outline, the next one to drop).
   function rotate() {
-    app.placing.dir = app.placing.dir === 'h' ? 'v' : 'h';
+    const placing = app.placing;
+    if (placing.draft) {
+      const { id, x, y, dir } = placing.draft;
+      placing.draft = outlineAt(id, x, y, dir === 'h' ? 'v' : 'h');
+    } else {
+      placing.dir = placing.dir === 'h' ? 'v' : 'h';
+    }
     renderBoard();
   }
 
   function randomize() {
     app.placing.ships = {};
+    app.placing.draft = null;
     E.randomFleet(app.state.size, Math.random, fleet()).forEach((s) => { app.placing.ships[s.id] = { x: s.x, y: s.y, dir: s.dir }; });
     app.placing.selected = null;
-    renderBoard();
-    renderDock();
+    renderPlacement();
   }
 
   function clearShips() {
     app.placing.ships = {};
+    app.placing.draft = null;
     app.placing.selected = fleet()[0]?.id || null;
+    renderPlacement();
+  }
+
+  function renderPlacement() {
     renderBoard();
     renderDock();
+    renderStatus();
   }
 
   function renderDock() {
@@ -514,31 +684,61 @@
     const ready = mine.ready;
     const color = colorOf(mine.color);
     ui.dockShips.hidden = ready;
-    ui.rotate.parentElement.hidden = ready;
+    ui.randomize.parentElement.hidden = ready;
     ui.done.hidden = ready;
     ui.change.hidden = !ready;
     if (ready) return;
 
+    const placing = app.placing;
     ui.dockShips.replaceChildren(
       ...fleet().map((ship) => {
         const li = document.createElement('li');
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = `ship-pick${app.placing.ships[ship.id] ? ' placed' : ''}`;
-        button.setAttribute('aria-pressed', String(app.placing.selected === ship.id));
+        button.className = `ship-pick${placing.ships[ship.id] ? ' placed' : ''}${placing.draft?.id === ship.id ? ' editing' : ''}`;
+        button.setAttribute('aria-pressed', String(placing.selected === ship.id));
         button.style.setProperty('--pc', color);
         button.innerHTML = `<span class="name">${ship.name}</span><span class="ship-size">${'<i></i>'.repeat(ship.size)}</span>`;
         button.addEventListener('click', () => {
-          delete app.placing.ships[ship.id];
-          app.placing.selected = ship.id;
-          renderBoard();
-          renderDock();
+          if (placing.ships[ship.id]) editShip(ship.id);
+          else if (placing.draft?.id !== ship.id) {
+            settleDraft();
+            placing.selected = ship.id;
+          }
+          renderPlacement();
         });
         li.append(button);
         return li;
       })
     );
-    ui.done.disabled = placedShips().length < fleet().length;
+    ui.done.disabled = placedShips().length < fleet().length || !!placing.draft;
+  }
+
+  /* ---------- Zoom (phones, seas of 16 or more) ---------- */
+
+  const narrow = window.matchMedia('(max-width: 860px)');
+  const zoomable = () => narrow.matches && (app.state?.size || 0) >= 16;
+  // The cell size the CSS picks at zoom 1 on a phone: the whole sea across the screen width.
+  const fitCell = () => Math.min(40, Math.max(12, (window.innerWidth - 28) / ((app.state?.size || 10) + 0.8)));
+  const maxZoom = () => Math.max(1, 44 / fitCell());
+
+  // Zoom about a point (a pinch's midpoint, or the middle of the view), keeping it in place.
+  function setZoom(zoom, anchor) {
+    const wrap = ui.seaWrap;
+    zoom = Math.min(maxZoom(), Math.max(1, zoom));
+    const rect = wrap.getBoundingClientRect();
+    const ax = anchor ? anchor.x - rect.left : wrap.clientWidth / 2;
+    const ay = anchor ? anchor.y - rect.top : wrap.clientHeight / 2;
+    const fx = (wrap.scrollLeft + ax) / (wrap.scrollWidth || 1);
+    const fy = (wrap.scrollTop + ay) / (wrap.scrollHeight || 1);
+    app.zoom = zoom;
+    ui.sea.style.setProperty('--zoom', zoom);
+    wrap.classList.toggle('zoomed', zoom > 1.01);
+    wrap.scrollLeft = fx * wrap.scrollWidth - ax;
+    wrap.scrollTop = fy * wrap.scrollHeight - ay;
+    ui.zoomOut.disabled = zoom <= 1.01;
+    ui.zoomFit.disabled = zoom <= 1.01;
+    ui.zoomIn.disabled = zoom >= maxZoom() - 0.01;
   }
 
   /* ---------- Side panel ---------- */
@@ -574,7 +774,9 @@
         note = "This game started before you joined, so you're watching.";
       } else if (!mine.ready) {
         title = 'Place your fleet';
-        note = 'Pick a ship, then a square. Rotate with R, right-click, or the button. Nobody can see your ships.';
+        note = app.placing.draft
+          ? 'Turn it with the arrows, then tap the check to keep it or the trash can to remove it. Tap another square to move it.'
+          : 'Tap a square to drop the outline of the highlighted ship. Tap a kept ship to change it. Nobody can see your ships.';
       } else {
         title = 'Fleet ready';
         note = `Waiting for ${waiting.map((p) => p.name).join(', ')}…`;
@@ -955,12 +1157,14 @@
 
   ui.sea.addEventListener('pointerdown', (event) => { app.pointer = event.pointerType; });
   ui.sea.addEventListener('click', (event) => {
+    const control = event.target.closest('[data-edit]');
+    if (control) return onEdit(control);
     const cell = event.target.closest('.cell');
     if (cell) onCellClick(+cell.dataset.x, +cell.dataset.y);
   });
   ui.sea.addEventListener('pointerover', (event) => {
     const cell = event.target.closest('.cell');
-    if (!cell || app.state?.phase !== 'placing' || event.pointerType === 'touch') return;
+    if (!cell || app.state?.phase !== 'placing' || event.pointerType === 'touch' || app.placing.draft) return;
     app.placing.hover = { x: +cell.dataset.x, y: +cell.dataset.y };
     renderBoard();
   });
@@ -979,8 +1183,25 @@
     if (event.key === 'Escape' && !ui.announce.hidden) closeAnnouncement();
   });
 
-  ui.rotate.addEventListener('click', rotate);
   ui.randomize.addEventListener('click', randomize);
+
+  ui.zoomIn.addEventListener('click', () => setZoom(app.zoom * 1.5));
+  ui.zoomOut.addEventListener('click', () => setZoom(app.zoom / 1.5));
+  ui.zoomFit.addEventListener('click', () => setZoom(1));
+  // Pinch to zoom the sea itself; the page doesn't zoom, and one finger still scrolls.
+  let pinch = null;
+  const spread = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const middle = (t) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+  ui.seaWrap.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 2 && zoomable()) pinch = { spread: spread(event.touches), zoom: app.zoom };
+  }, { passive: true });
+  ui.seaWrap.addEventListener('touchmove', (event) => {
+    if (!pinch || event.touches.length !== 2) return;
+    event.preventDefault();
+    setZoom((pinch.zoom * spread(event.touches)) / pinch.spread, middle(event.touches));
+  }, { passive: false });
+  ui.seaWrap.addEventListener('touchend', (event) => { if (event.touches.length < 2) pinch = null; });
+  narrow.addEventListener('change', () => app.state && app.state.phase !== 'lobby' && renderBoard());
   ui.clear.addEventListener('click', clearShips);
   ui.done.addEventListener('click', () => send({ type: 'place', ships: placedShips() }));
   ui.change.addEventListener('click', () => {

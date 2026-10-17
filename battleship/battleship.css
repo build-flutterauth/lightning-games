@@ -191,9 +191,47 @@
   cursor: pointer;
 }
 
-.fleet-setup {
+.fleet-setup,
+.sea-setup {
   display: grid;
   gap: 8px;
+}
+
+.sea-setup .field-label {
+  margin: 0;
+}
+
+.sea-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.sea-row > output {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.sea-row .stepper output {
+  min-width: 3.4em;
+}
+
+.sea-row .auto {
+  padding: 0.35em 0.9em;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.sea-row .auto[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--bolt);
+  color: var(--bolt-ink);
 }
 
 .fleet-head {
@@ -311,6 +349,30 @@
   padding: 14px clamp(12px, 2vw, 24px);
 }
 
+.sea-area {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.zoom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.zoom-bar .hint {
+  margin-right: auto;
+  font-size: 0.78rem;
+}
+
+.zoom-bar .btn {
+  min-width: 40px;
+}
+
 .sea-wrap {
   display: grid;
   place-items: center;
@@ -385,6 +447,89 @@
   background: linear-gradient(rgb(255 255 255 / 0.28), transparent 55%), var(--pc);
   box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.75), 0 4px 10px rgb(0 0 0 / 0.4);
   pointer-events: none;
+}
+
+/* An outline still being placed: dashed, see-through, with its controls around it. */
+.ship.draft {
+  background: color-mix(in srgb, var(--pc) 28%, transparent);
+  box-shadow: 0 0 0 2px var(--pc), 0 0 0 4px rgb(255 255 255 / 0.25);
+  outline: 2px dashed rgb(255 255 255 / 0.9);
+  outline-offset: -5px;
+}
+
+.ship.draft.bad {
+  background: rgb(255 90 90 / 0.25);
+  box-shadow: 0 0 0 2px #ff7070;
+  outline-color: #ffb3b3;
+}
+
+.edit {
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  margin: 8%;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.edit svg {
+  width: 72%;
+  height: 72%;
+}
+
+.edit:hover {
+  filter: brightness(1.15);
+}
+
+.edit:focus-visible {
+  outline-offset: 1px;
+}
+
+.edit.turn {
+  margin: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #ffc35a;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.55));
+}
+
+.edit.turn svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* Each arrow leans into the ship end it turns about. */
+.edit.turn.up { transform: translateY(18%); }
+.edit.turn.down { transform: translateY(-18%); }
+.edit.turn.left { transform: translateX(18%); }
+.edit.turn.right { transform: translateX(-18%); }
+.edit.turn.down svg { transform: rotate(180deg); }
+.edit.turn.left svg { transform: rotate(-90deg); }
+.edit.turn.right svg { transform: rotate(90deg); }
+
+.edit.keep {
+  background: #2fbf71;
+  color: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.45);
+}
+
+.edit.keep:disabled {
+  background: #4b5a75;
+  color: #aab4c8;
+  cursor: not-allowed;
+}
+
+.edit.trash {
+  background: #e5484d;
+  color: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.45);
+}
+
+.ship-pick.editing {
+  border-style: dashed;
 }
 
 .ship.preview {
@@ -841,14 +986,43 @@
     padding: 10px;
   }
 
-  /* The whole sea fits the screen width, even 26×26; touch aims first, so small squares are fine. */
+  /* The whole sea fits the screen width, even 26×26; touch aims first, and seas of 16 or
+     more can be zoomed (buttons or pinch) and scrolled inside a fixed window. */
   .sea {
-    --cell: clamp(12px, (100vw - 28px) / (var(--n) + 0.8), 40px);
+    --cell: calc(clamp(12px, (100vw - 28px) / (var(--n) + 0.8), 40px) * var(--zoom, 1));
   }
 
   .sea-wrap {
     place-items: start center;
-    overflow: auto hidden;
+    max-height: 72dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .sea-wrap.zoomed {
+    place-items: start;
+  }
+
+  /* While zoomed, the letters and numbers stay put as the sea scrolls under them. */
+  .sea-wrap.zoomed .label {
+    position: sticky;
+    z-index: 6;
+    background: var(--bg);
+  }
+
+  .sea-wrap.zoomed .label.col,
+  .sea-wrap.zoomed .label.corner {
+    top: 0;
+  }
+
+  .sea-wrap.zoomed .label.row,
+  .sea-wrap.zoomed .label.corner {
+    left: 0;
+  }
+
+  .sea-wrap.zoomed .label.corner {
+    z-index: 7;
   }
 
   /* Status and votes sit above the board, where a phone player is looking. */

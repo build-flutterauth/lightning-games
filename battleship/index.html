@@ -62,6 +62,11 @@
 
         <ol class="lobby-list" id="lobby-list" aria-live="polite"></ol>
 
+        <div class="sea-setup">
+          <p class="field-label">Sea</p>
+          <div class="sea-row" id="sea-setup"></div>
+        </div>
+
         <div class="fleet-setup">
           <div class="fleet-head">
             <p class="field-label">Each player's fleet</p>
@@ -83,15 +88,22 @@
 
     <!-- Placing ships and the battle -->
     <section class="screen play" id="play" hidden>
-      <div class="sea-wrap">
-        <div class="sea" id="sea"></div>
+      <div class="sea-area">
+        <div class="zoom-bar" id="zoom-bar" hidden>
+          <span class="hint">Pinch or use the buttons to zoom</span>
+          <button class="btn btn-sm" id="zoom-out" type="button" aria-label="Zoom out">&minus;</button>
+          <button class="btn btn-sm" id="zoom-fit" type="button">Fit</button>
+          <button class="btn btn-sm" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        </div>
+        <div class="sea-wrap" id="sea-wrap">
+          <div class="sea" id="sea"></div>
+        </div>
       </div>
       <aside class="side">
         <div class="status" id="status"></div>
         <div class="dock" id="dock" hidden>
           <ol class="ships" id="dock-ships"></ol>
           <div class="dock-actions">
-            <button class="btn btn-sm" id="rotate" type="button">Rotate (R)</button>
             <button class="btn btn-sm" id="randomize" type="button">Random</button>
             <button class="btn btn-sm btn-ghost" id="clear" type="button">Clear</button>
           </div>

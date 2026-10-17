@@ -22,6 +22,14 @@ test('each player gets 20 seconds before others can vote', () => {
   assert.equal(require('../battleship/battleship-engine.js').VOTE_DELAY_MS, 20000);
 });
 
+test('the host may pick a sea from 10x10 to 26x26, or let it grow with the players', () => {
+  const { validateSize } = require('../battleship/battleship-engine.js');
+  assert.equal(validateSize(null), null);
+  assert.equal(validateSize(10), 10);
+  assert.equal(validateSize(26), 26);
+  for (const bad of [9, 27, 12.5, '12']) assert.throws(() => validateSize(bad), /10x10 to 26x26/);
+});
+
 test('board size follows the player count', () => {
   const expected = { 2: 10, 3: 10, 4: 10, 5: 11, 6: 12, 10: 16, 15: 21, 20: 26 };
   for (const [n, size] of Object.entries(expected)) assert.equal(boardSize(+n), size);

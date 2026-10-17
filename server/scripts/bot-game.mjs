@@ -279,21 +279,33 @@ async function customFleetGame() {
   const [host, guest] = bots;
   const counts = { carrier: 0, battleship: 0, cruiser: 1, submarine: 0, destroyer: 3 };
   await guest.expectError({ type: 'fleet', counts }, /Only the host/);
+
+  // The host picks the sea size (10-26); null goes back to growing with the players.
+  await guest.expectError({ type: 'sea', size: 14 }, /Only the host/);
+  await host.expectError({ type: 'sea', size: 27 }, /10x10 to 26x26/);
+  await host.expectError({ type: 'sea', size: 9 }, /10x10 to 26x26/);
+  host.send({ type: 'sea', size: 26 });
+  await all(bots, (b) => b.state.size === 26 && !b.state.seaAuto, 'a 26x26 sea');
+  host.send({ type: 'sea', size: null });
+  await all(bots, (b) => b.state.size === 10 && b.state.seaAuto, 'the automatic sea');
   await host.expectError({ type: 'fleet', counts: { destroyer: 9 } }, /0 to 4/);
 
   const huge = { carrier: 4, battleship: 4, cruiser: 4, submarine: 4, destroyer: 4 };
   host.send({ type: 'fleet', counts: huge });
   await all(bots, (b) => b.state.fleet.carrier === 4, 'the huge fleet');
   await host.expectError({ type: 'start' }, /too many for a 10×10 sea/);
+  host.send({ type: 'sea', size: 13 });
+  await all(bots, (b) => b.state.size === 13, 'a 13x13 sea');
 
   host.send({ type: 'fleet', counts });
   await all(bots, (b) => b.state.fleet.destroyer === 3 && b.state.fleet.carrier === 0, 'the custom fleet');
   host.send({ type: 'start' });
   await all(bots, (b) => b.state.phase === 'placing', 'placing');
 
+  assert.equal(bots[0].state.size, 13, "the host's sea size is used");
   const fleet = engine.fleetFromCounts(counts);
-  await guest.expectError({ type: 'place', ships: engine.randomFleet(10) }, /Place all 4 ships/);
-  bots.forEach((b) => b.send({ type: 'place', ships: engine.randomFleet(10, Math.random, fleet) }));
+  await guest.expectError({ type: 'place', ships: engine.randomFleet(13) }, /Place all 4 ships/);
+  bots.forEach((b) => b.send({ type: 'place', ships: engine.randomFleet(13, Math.random, fleet) }));
   await all(bots, (b) => b.state.phase === 'battle' || b.state.phase === 'over', 'the battle');
   assert.ok(bots.every((b) => !b.state.myShips || b.state.myShips.length === 4));
   const sunk = bots[0].events.find((e) => e.kind === 'collisions').sunk;
